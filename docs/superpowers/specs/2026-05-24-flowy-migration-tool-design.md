@@ -9,7 +9,7 @@
 
 `flowy` is a standalone command-line tool for managing Genesys Cloud flow migrations. It follows the conventions of database migration tools like Flyway and Phinx: migrations are versioned files, the tool tracks which have been applied, and running `flowy migrate` brings the target environment up to date.
 
-The tool owns authentication, SDK session management, history tracking, auto-snapshotting, and error handling. Migration authors write only the logic that changes flows — nothing else.
+The tool owns authentication, SDK session management, history tracking, auto-snapshotting, and error handling. Migration authors write only the logic that changes flows — including any validation, check-in, and publishing steps appropriate to their migration — and nothing else.
 
 ---
 
@@ -35,8 +35,8 @@ A project using flowy looks like this:
 my-genesys-project/
 ├── flowy.config.js
 └── migrations/
-    ├── V001__add_greeting_prompt.js
-    └── V002__add_callback_menu.js
+    ├── V001__add_greeting_prompt.js   # JavaScript
+    └── V002__add_callback_menu.ts     # TypeScript — both are supported
 ```
 
 ---
@@ -72,14 +72,18 @@ Flowy loads `.env` automatically via `dotenv`. The `--env` flag on any command o
 
 ## Migration File Format
 
-Migration files are named `V<NNN>__<description>.js` using sequential integers (e.g. `V001__add_greeting_prompt.js`). The double underscore separates the version from the description.
+Migration files are named `V<NNN>__<description>.js` or `V<NNN>__<description>.ts` using sequential integers (e.g. `V001__add_greeting_prompt.ts`). The double underscore separates the version from the description. JavaScript and TypeScript migrations can coexist in the same project.
 
-Each file is a Node.js module exporting:
+Each file is a module exporting:
 
 - **`description`** *(required)* — human-readable string stored in migration history
-- **`flows`** *(optional)* — array of flow names to check in before `up()` runs (auto-snapshot)
-- **`up(architectSession, platformClient)`** *(required)* — applies the migration
+- **`flows`** *(optional)* — array of flow names to check in before `up()` runs (pre-migration snapshot only)
+- **`up(architectSession, platformClient)`** *(required)* — applies the migration; responsible for all validation, check-in, and publishing
 - **`down(architectSession, platformClient)`** *(optional)* — rolls back the migration
+
+The migration is considered **applied** when `up()` returns without throwing. Flowy does not call `validate()`, `checkIn()`, or `publish()` on the author's behalf — those are part of the migration's logic and belong inside `up()`.
+
+### JavaScript example
 
 ```javascript
 // migrations/V001__add_greeting_prompt.js
@@ -97,7 +101,10 @@ module.exports = {
     // platformClient  — authenticated Genesys Cloud Platform API Client SDK
     const flow = await architectSession.flows.getFlowByName('MainInbound');
     // ... make changes ...
+    const validationResult = await flow.validate();
+    if (!validationResult.isSuccess) throw new Error(validationResult.errors.join('\n'));
     await flow.checkIn('V001: add greeting prompt');
+    await flow.publish();
   },
 
   async down(architectSession, platformClient) {
@@ -108,6 +115,34 @@ module.exports = {
   }
 };
 ```
+
+### TypeScript example
+
+```typescript
+// migrations/V002__add_callback_menu.ts
+
+export default {
+  description: 'Add callback menu to support flow',
+  flows: ['SupportInbound'],
+
+  async up(architectSession: any, platformClient: any) {
+    const flow = await architectSession.flows.getFlowByName('SupportInbound');
+    // ... make changes ...
+    const validationResult = await flow.validate();
+    if (!validationResult.isSuccess) throw new Error(validationResult.errors.join('\n'));
+    await flow.checkIn('V002: add callback menu');
+    await flow.publish();
+  },
+
+  async down(architectSession: any, platformClient: any) {
+    const flow = await architectSession.flows.getFlowByName('SupportInbound');
+    // ... undo changes ...
+    await flow.checkIn('V002 rolled back');
+  }
+};
+```
+
+*(Type definitions shipped with flowy will replace the `any` annotations above once the types package is available.)*
 
 Migration authors work directly from the Architect Scripting SDK and Platform API Client SDK documentation. Flowy adds no wrapper or abstraction over the session objects.
 
@@ -120,6 +155,14 @@ Flowy uses a **single shared `ArchScripting.run()` session** for the entire `flo
 The Platform API Client SDK is also authenticated once using the same credentials. Both clients are passed to migration functions as arguments.
 
 ---
+
+## TypeScript Support
+
+Flowy supports TypeScript migrations natively. When a `.ts` migration file is discovered, flowy loads it using [`tsx`](https://github.com/privatenumber/tsx) — a lightweight TypeScript runtime that requires no configuration and handles both ESM and CommonJS.
+
+`tsx` is an optional peer dependency. If `.ts` migration files are present but `tsx` is not installed, flowy fails fast with a clear message explaining what to install. Projects using only `.js` migrations have no TypeScript dependency.
+
+Flowy ships a types package (`@flowy/types` or bundled `.d.ts` declarations) providing the `FlowMigration` interface so TypeScript authors get full autocomplete and type checking for the migration module shape and both SDK clients.
 
 ## Auto-Snapshot
 
