@@ -1,0 +1,28 @@
+{
+  "name": "flowy",
+  "version": "0.1.0",
+  "description": "Genesys Cloud flow migration tool",
+  "bin": { "flowy": "./bin/flowy.js" },
+  "main": "src/index.js",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^12.0.0",
+    "dotenv": "^16.4.0",
+    "purecloud-flow-scripting-api-sdk-javascript": "latest",
+    "purecloud-platform-client-v2": "latest"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "tsx": { "optional": true }
+  },
+  "peerDependencies": {
+    "tsx": ">=4.0.0"
+  }
+}
