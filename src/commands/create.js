@@ -7,7 +7,7 @@ const { loadConfig } = require('../config');
 const JS_TEMPLATE = (version, description) => `'use strict';
 
 module.exports = {
-  description: '${description}',
+  description: ${JSON.stringify(description)},
 
   // Optional: list flow names to check in before up() runs (pre-migration snapshot).
   // flows: ['MyFlow'],
@@ -24,7 +24,7 @@ module.exports = {
 `;
 
 const TS_TEMPLATE = (version, description) => `export default {
-  description: '${description}',
+  description: ${JSON.stringify(description)},
 
   // Optional: list flow names to check in before up() runs (pre-migration snapshot).
   // flows: ['MyFlow'],

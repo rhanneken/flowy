@@ -27,7 +27,14 @@ module.exports = async function baseline(options) {
     process.exit(err.exitCode ?? exitCodes.HISTORY_STORE_ERROR);
   }
 
-  const migrations = loadMigrations(config.migrationsDir);
+  let migrations;
+  try {
+    migrations = loadMigrations(config.migrationsDir);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(err.exitCode ?? exitCodes.CONFIG_ERROR);
+  }
+
   const appliedVersions = await getAppliedVersions(platformClient);
   const unrecorded = migrations.filter((m) => !appliedVersions.has(m.version));
 

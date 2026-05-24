@@ -78,6 +78,30 @@ describe('historyStore', () => {
     expect(pc._dataTablesApi.createFlowsDatatableRow).toHaveBeenCalledOnce();
   });
 
+  it('record() updates an existing row instead of inserting a duplicate', async () => {
+    const pc = makePlatformClient();
+    await store.ensureTable(pc);
+    const entry = {
+      key: 'V001',
+      description: 'Add greeting',
+      filename: 'V001__add_greeting.js',
+      checksum: 'abc123',
+      appliedAt: '2026-05-24T00:00:00.000Z',
+      appliedBy: 'developer',
+      executionTime: 420,
+      status: 'failed',
+    };
+    // First call: inserts
+    await store.record(pc, entry);
+    expect(pc._dataTablesApi.createFlowsDatatableRow).toHaveBeenCalledOnce();
+    expect(pc._dataTablesApi.updateFlowsDatatableRow).not.toHaveBeenCalled();
+
+    // Second call with same key: updates instead of inserting
+    await store.record(pc, { ...entry, status: 'applied' });
+    expect(pc._dataTablesApi.createFlowsDatatableRow).toHaveBeenCalledOnce(); // still just once
+    expect(pc._dataTablesApi.updateFlowsDatatableRow).toHaveBeenCalledOnce();
+  });
+
   it('getAppliedVersions returns a Set of applied version strings', async () => {
     const pc = makePlatformClient();
     await store.ensureTable(pc);
@@ -88,6 +112,15 @@ describe('historyStore', () => {
     const versions = await store.getAppliedVersions(pc);
     expect(versions.has('V001')).toBe(true);
     expect(versions.has('V002')).toBe(false); // failed is not applied
+  });
+
+  it('getAppliedVersions includes rolled_back versions', async () => {
+    const pc = makePlatformClient();
+    await store.ensureTable(pc);
+    await store.record(pc, { key: 'V001', description: 'd', filename: 'f', checksum: 'c',
+      appliedAt: 'a', appliedBy: 'b', executionTime: 1, status: 'rolled_back' });
+    const versions = await store.getAppliedVersions(pc);
+    expect(versions.has('V001')).toBe(true);
   });
 
   it('getStoredChecksums returns a Map of version -> checksum for applied migrations', async () => {

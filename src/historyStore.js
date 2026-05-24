@@ -69,14 +69,30 @@ async function ensureTable(platformClient) {
 }
 
 /**
- * Record a migration entry in the history table.
+ * Get a single row by key, or null if it doesn't exist.
+ * @param {object} platformClient
+ * @param {string} version  e.g. 'V001'
+ * @returns {Promise<object|null>}
+ */
+async function getRow(platformClient, version) {
+  const rows = await getAllRows(platformClient);
+  return rows.find((r) => r.key === version) || null;
+}
+
+/**
+ * Record a migration entry (insert or update).
  * @param {object} platformClient
  * @param {object} entry  { key, description, filename, checksum, appliedAt, appliedBy, executionTime, status, error? }
  */
 async function record(platformClient, entry) {
   const tableId = await ensureTable(platformClient);
   const api = new platformClient.DataTablesApi();
-  await api.createFlowsDatatableRow(tableId, entry);
+  const existing = await getRow(platformClient, entry.key);
+  if (existing) {
+    await api.updateFlowsDatatableRow(tableId, entry.key, entry);
+  } else {
+    await api.createFlowsDatatableRow(tableId, entry);
+  }
 }
 
 /**
@@ -112,7 +128,7 @@ async function getAllRows(platformClient) {
 async function getAppliedVersions(platformClient) {
   const rows = await getAllRows(platformClient);
   return new Set(
-    rows.filter((r) => r.status === 'applied').map((r) => r.key)
+    rows.filter((r) => r.status === 'applied' || r.status === 'rolled_back').map((r) => r.key)
   );
 }
 
@@ -134,6 +150,7 @@ async function getStoredChecksums(platformClient) {
 
 module.exports = {
   ensureTable,
+  getRow,
   record,
   updateStatus,
   getAllRows,

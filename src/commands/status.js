@@ -26,7 +26,14 @@ module.exports = async function status(options) {
     process.exit(err.exitCode ?? exitCodes.HISTORY_STORE_ERROR);
   }
 
-  const migrations = loadMigrations(config.migrationsDir);
+  let migrations;
+  try {
+    migrations = loadMigrations(config.migrationsDir);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(err.exitCode ?? exitCodes.CONFIG_ERROR);
+  }
+
   const rows = await getAllRows(platformClient);
   const rowsByVersion = Object.fromEntries(rows.map((r) => [r.key, r]));
 

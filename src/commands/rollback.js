@@ -40,7 +40,14 @@ module.exports = async function rollback(options) {
   }
 
   const last = applied[0];
-  const migrations = loadMigrations(config.migrationsDir);
+  let migrations;
+  try {
+    migrations = loadMigrations(config.migrationsDir);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(err.exitCode ?? exitCodes.CONFIG_ERROR);
+  }
+
   const migration = migrations.find((m) => m.version === last.key);
 
   if (!migration) {
