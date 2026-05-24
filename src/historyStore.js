@@ -1,0 +1,144 @@
+'use strict';
+
+const { HISTORY_STORE_ERROR } = require('./exitCodes');
+const { FlowyCLIError } = require('./config');
+
+const TABLE_NAME = '_flowy_migrations';
+
+const TABLE_SCHEMA = {
+  $schema: 'http://json-schema.org/draft-04/schema#',
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    key: { type: 'string', title: 'key' },
+    description: { type: 'string' },
+    filename: { type: 'string' },
+    checksum: { type: 'string' },
+    appliedAt: { type: 'string' },
+    appliedBy: { type: 'string' },
+    executionTime: { type: 'integer' },
+    status: { type: 'string' },
+    error: { type: 'string' },
+  },
+};
+
+// Cache the table ID after first lookup so we don't list tables on every call
+let cachedTableId = null;
+
+/**
+ * Reset the cached table ID (used between test runs).
+ */
+function resetCache() {
+  cachedTableId = null;
+}
+
+/**
+ * Get or create the _flowy_migrations Data Table.
+ * Returns the table ID.
+ * @param {object} platformClient
+ * @returns {Promise<string>} tableId
+ */
+async function ensureTable(platformClient) {
+  if (cachedTableId) return cachedTableId;
+
+  const api = new platformClient.DataTablesApi();
+
+  try {
+    const result = await api.getFlowsDatatables();
+    const existing = (result.entities || []).find((t) => t.name === TABLE_NAME);
+
+    if (existing) {
+      cachedTableId = existing.id;
+      return cachedTableId;
+    }
+
+    const created = await api.postFlowsDatatables({
+      name: TABLE_NAME,
+      schema: TABLE_SCHEMA,
+    });
+    cachedTableId = created.id;
+    return cachedTableId;
+  } catch (err) {
+    if (err.exitCode) throw err;
+    throw new FlowyCLIError(
+      `Failed to access or create the ${TABLE_NAME} Data Table: ${err.message}\n` +
+      'Ensure the OAuth client has the "architect" scope and Data Tables permissions.',
+      HISTORY_STORE_ERROR
+    );
+  }
+}
+
+/**
+ * Record a migration entry in the history table.
+ * @param {object} platformClient
+ * @param {object} entry  { key, description, filename, checksum, appliedAt, appliedBy, executionTime, status, error? }
+ */
+async function record(platformClient, entry) {
+  const tableId = await ensureTable(platformClient);
+  const api = new platformClient.DataTablesApi();
+  await api.createFlowsDatatableRow(tableId, entry);
+}
+
+/**
+ * Update the status (and optionally other fields) of an existing record.
+ * @param {object} platformClient
+ * @param {string} version  e.g. 'V001'
+ * @param {string} status
+ * @param {object} [extra]  additional fields to merge
+ */
+async function updateStatus(platformClient, version, status, extra = {}) {
+  const tableId = await ensureTable(platformClient);
+  const api = new platformClient.DataTablesApi();
+  await api.updateFlowsDatatableRow(tableId, version, { status, ...extra });
+}
+
+/**
+ * Get all rows from the history table.
+ * @param {object} platformClient
+ * @returns {Promise<object[]>}
+ */
+async function getAllRows(platformClient) {
+  const tableId = await ensureTable(platformClient);
+  const api = new platformClient.DataTablesApi();
+  const result = await api.getFlowsDatatableRows(tableId, { pageSize: 500 });
+  return result.entities || [];
+}
+
+/**
+ * Returns a Set of version strings that have been successfully applied.
+ * @param {object} platformClient
+ * @returns {Promise<Set<string>>}
+ */
+async function getAppliedVersions(platformClient) {
+  const rows = await getAllRows(platformClient);
+  return new Set(
+    rows.filter((r) => r.status === 'applied').map((r) => r.key)
+  );
+}
+
+/**
+ * Returns a Map of version -> checksum for applied migrations.
+ * @param {object} platformClient
+ * @returns {Promise<Map<string, string>>}
+ */
+async function getStoredChecksums(platformClient) {
+  const rows = await getAllRows(platformClient);
+  const map = new Map();
+  for (const row of rows) {
+    if (row.status === 'applied' && row.checksum) {
+      map.set(row.key, row.checksum);
+    }
+  }
+  return map;
+}
+
+module.exports = {
+  ensureTable,
+  record,
+  updateStatus,
+  getAllRows,
+  getAppliedVersions,
+  getStoredChecksums,
+  resetCache,
+  TABLE_NAME,
+};
