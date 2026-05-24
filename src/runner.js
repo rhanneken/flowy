@@ -49,6 +49,14 @@ async function runMigrations(
   let pending = allMigrations.filter((m) => !appliedVersions.has(m.version));
   if (options.target) {
     const targetNum = parseInt(options.target.slice(1), 10);
+    // Validate target exists in allMigrations
+    const targetExists = allMigrations.some((m) => parseInt(m.version.slice(1), 10) === targetNum);
+    if (!targetExists) {
+      throw new FlowyCLIError(
+        `Target version "${options.target}" not found in migrations directory.`,
+        MIGRATION_FAILED,
+      );
+    }
     pending = pending.filter((m) => parseInt(m.version.slice(1), 10) <= targetNum);
   }
 
