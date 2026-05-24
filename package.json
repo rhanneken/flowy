@@ -4,6 +4,7 @@
   "description": "Genesys Cloud flow migration tool",
   "bin": { "flowy": "./bin/flowy.js" },
   "main": "src/index.js",
+  "types": "types/FlowMigration.d.ts",
   "engines": { "node": ">=18" },
   "scripts": {
     "test": "vitest run",
