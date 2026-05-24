@@ -25,8 +25,8 @@ module.exports = function validate() {
   const nums = migrations.map((m) => parseInt(m.version.slice(1), 10));
   const gaps = [];
   for (let i = 1; i < nums.length; i++) {
-    if (nums[i] !== nums[i - 1] + 1) {
-      gaps.push(`V${String(nums[i - 1] + 1).padStart(3, '0')}`);
+    for (let missing = nums[i - 1] + 1; missing < nums[i]; missing++) {
+      gaps.push(`V${String(missing).padStart(3, '0')}`);
     }
   }
 

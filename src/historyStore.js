@@ -109,15 +109,23 @@ async function updateStatus(platformClient, version, status, extra = {}) {
 }
 
 /**
- * Get all rows from the history table.
+ * Get all rows from the history table (handles pagination).
  * @param {object} platformClient
  * @returns {Promise<object[]>}
  */
 async function getAllRows(platformClient) {
   const tableId = await ensureTable(platformClient);
   const api = new platformClient.DataTablesApi();
-  const result = await api.getFlowsDatatableRows(tableId, { pageSize: 500 });
-  return result.entities || [];
+  const allEntities = [];
+  let pageNumber = 1;
+  while (true) {
+    const result = await api.getFlowsDatatableRows(tableId, { pageSize: 100, pageNumber });
+    const entities = result.entities || [];
+    allEntities.push(...entities);
+    if (!result.pageCount || pageNumber >= result.pageCount) break;
+    pageNumber++;
+  }
+  return allEntities;
 }
 
 /**

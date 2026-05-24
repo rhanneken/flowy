@@ -132,6 +132,25 @@ describe('historyStore', () => {
     expect(checksums.get('V001')).toBe('abc');
   });
 
+  it('getAllRows fetches all pages when pageCount > 1', async () => {
+    const page1 = [{ key: 'V001', status: 'applied' }];
+    const page2 = [{ key: 'V002', status: 'applied' }];
+    let callCount = 0;
+    const pc = makePlatformClient({
+      getFlowsDatatableRows: vi.fn(async () => {
+        callCount++;
+        if (callCount === 1) return { entities: page1, pageCount: 2, pageNumber: 1 };
+        return { entities: page2, pageCount: 2, pageNumber: 2 };
+      }),
+    });
+    await store.ensureTable(pc);
+    const rows = await store.getAllRows(pc);
+    expect(rows).toHaveLength(2);
+    expect(rows[0].key).toBe('V001');
+    expect(rows[1].key).toBe('V002');
+    expect(pc._dataTablesApi.getFlowsDatatableRows).toHaveBeenCalledTimes(2);
+  });
+
   it('updateStatus changes the status of an existing record', async () => {
     const pc = makePlatformClient();
     await store.ensureTable(pc);
