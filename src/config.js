@@ -16,7 +16,7 @@ class FlowyCLIError extends Error {
  * Load and validate flowy.config.js from the given directory.
  * @param {string} cwd  Directory to look in (defaults to process.cwd())
  * @param {string|null} envName  Environment to select (null = use defaultEnvironment)
- * @returns {{ env: object, migrationsDir: string, raw: object }}
+ * @returns {{ env: object, migrationsDir: string, raw: object, selectedEnv: string }}
  */
 function loadConfig(cwd = process.cwd(), envName = null) {
   // Load .env file if present (silently ignore if missing)
