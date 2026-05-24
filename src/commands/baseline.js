@@ -10,9 +10,22 @@ const exitCodes = require('../exitCodes');
 
 module.exports = async function baseline(options) {
   resetCache();
-  const config = loadConfig(process.cwd(), options.env || null);
-  const platformClient = await authenticatePlatformClient(config.env);
-  await ensureTable(platformClient);
+  let config;
+  try {
+    config = loadConfig(process.cwd(), options.env || null);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(err.exitCode ?? exitCodes.CONFIG_ERROR);
+  }
+
+  let platformClient;
+  try {
+    platformClient = await authenticatePlatformClient(config.env);
+    await ensureTable(platformClient);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(err.exitCode ?? exitCodes.HISTORY_STORE_ERROR);
+  }
 
   const migrations = loadMigrations(config.migrationsDir);
   const appliedVersions = await getAppliedVersions(platformClient);

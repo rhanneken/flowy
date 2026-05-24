@@ -35,5 +35,5 @@ module.exports = function validate() {
   }
 
   console.log(`Validated ${migrations.length} migration file(s). No structural errors found.`);
-  if (gaps.length > 0) process.exit(1);
+  if (gaps.length > 0) process.exit(exitCodes.CONFIG_ERROR);
 };

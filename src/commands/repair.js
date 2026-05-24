@@ -18,9 +18,22 @@ function prompt(question) {
 
 module.exports = async function repair(options) {
   resetCache();
-  const config = loadConfig(process.cwd(), options.env || null);
-  const platformClient = await authenticatePlatformClient(config.env);
-  await ensureTable(platformClient);
+  let config;
+  try {
+    config = loadConfig(process.cwd(), options.env || null);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(err.exitCode ?? exitCodes.CONFIG_ERROR);
+  }
+
+  let platformClient;
+  try {
+    platformClient = await authenticatePlatformClient(config.env);
+    await ensureTable(platformClient);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(err.exitCode ?? exitCodes.HISTORY_STORE_ERROR);
+  }
 
   const rows = await getAllRows(platformClient);
   const migrations = loadMigrations(config.migrationsDir);
