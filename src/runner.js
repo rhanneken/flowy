@@ -117,7 +117,16 @@ async function runMigrations(
     );
   }
 
-  if (callbackError) throw callbackError;
+  if (callbackError) {
+    // The Platform Client SDK throws plain objects (not Error instances) for API
+    // failures. Wrap them so callers always get an Error with a readable message.
+    if (callbackError instanceof Error) throw callbackError;
+    const msg =
+      (callbackError.body && (callbackError.body.message || callbackError.body.error)) ||
+      callbackError.text ||
+      JSON.stringify(callbackError);
+    throw new Error(msg);
+  }
 }
 
 async function runOne(migration, architectSession, platformClient, options) {

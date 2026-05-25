@@ -45,7 +45,7 @@ async function ensureTable(platformClient) {
   const api = new platformClient.ArchitectApi();
 
   try {
-    const result = await api.getFlowsDatatables();
+    const result = await api.getFlowsDatatables({ name: TABLE_NAME, pageSize: 100 });
     const existing = (result.entities || []).find((t) => t.name === TABLE_NAME);
 
     if (existing) {
