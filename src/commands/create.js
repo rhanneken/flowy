@@ -1,8 +1,24 @@
 'use strict';
 
-const { mkdirSync, readdirSync, writeFileSync, existsSync } = require('fs');
+const { mkdirSync, writeFileSync } = require('fs');
 const { join } = require('path');
 const { loadConfig } = require('../config');
+
+/**
+ * Format a Date as a 14-character YYYYMMDDHHMMSS string for use as a migration version.
+ * @param {Date} d
+ * @returns {string}
+ */
+function formatTimestamp(d) {
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+    String(d.getHours()).padStart(2, '0'),
+    String(d.getMinutes()).padStart(2, '0'),
+    String(d.getSeconds()).padStart(2, '0'),
+  ].join('');
+}
 
 const JS_TEMPLATE = (version, description) => `'use strict';
 
@@ -64,21 +80,10 @@ module.exports = function create(description, options) {
 
   mkdirSync(config.migrationsDir, { recursive: true });
 
-  // Find the next version number
-  const PATTERN = /^V(\d+)__/;
-  const existing = existsSync(config.migrationsDir)
-    ? readdirSync(config.migrationsDir).filter((f) => PATTERN.test(f))
-    : [];
-  const maxNum = existing.reduce((max, f) => {
-    const [, n] = f.match(PATTERN);
-    return Math.max(max, parseInt(n, 10));
-  }, 0);
-  const nextNum = String(maxNum + 1).padStart(3, '0');
-  const version = `V${nextNum}`;
-
+  const version = formatTimestamp(new Date());
   const slug = description.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
   const ext = options.ts ? 'ts' : 'js';
-  const filename = `${version}__${slug}.${ext}`;
+  const filename = `${version}_${slug}.${ext}`;
   const filePath = join(config.migrationsDir, filename);
 
   const template = options.ts ? TS_TEMPLATE(version, description) : JS_TEMPLATE(version, description);

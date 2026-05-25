@@ -37,14 +37,14 @@ module.exports = async function status(options) {
   const rows = await getAllRows(platformClient);
   const rowsByVersion = Object.fromEntries(rows.map((r) => [r.key, r]));
 
-  const header = `${'Version'.padEnd(8)} ${'Status'.padEnd(12)} ${'Description'}`;
+  const header = `${'Version'.padEnd(16)} ${'Status'.padEnd(12)} ${'Description'}`;
   console.log(header);
   console.log('─'.repeat(header.length));
 
   for (const m of migrations) {
     const row = rowsByVersion[m.version];
     const statusStr = row ? row.status : 'pending';
-    const line = `${m.version.padEnd(8)} ${statusStr.padEnd(12)} ${m.module.description}`;
+    const line = `${m.version.padEnd(16)} ${statusStr.padEnd(12)} ${m.module.description}`;
     if (statusStr === 'applied') console.log(chalk.green(line));
     else if (statusStr === 'failed') console.log(chalk.red(line));
     else console.log(chalk.yellow(line));

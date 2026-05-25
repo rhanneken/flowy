@@ -24,8 +24,9 @@ program
   .command('migrate')
   .description('Apply all pending migrations')
   .option('--env <name>', 'target environment')
-  .option('--target <version>', 'apply migrations up to and including this version')
-  .option('--strict', 'fail on checksum mismatches instead of warning')
+  .option('--target <version>', 'apply migrations up to and including this version (YYYYMMDDHHMMSS)')
+  .option('--date <date>', 'apply all migrations up to the end of this date (YYYYMMDD or YYYY-MM-DD)')
+  .option('--strict', 'fail on checksum mismatches or out-of-order migrations instead of warning')
   .action(require('../src/commands/migrate'));
 
 program
