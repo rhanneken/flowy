@@ -49,4 +49,6 @@ module.exports = async function status(options) {
     else if (statusStr === 'failed') console.log(chalk.red(line));
     else console.log(chalk.yellow(line));
   }
+
+  process.exit(exitCodes.SUCCESS);
 };

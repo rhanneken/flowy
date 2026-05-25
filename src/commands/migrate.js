@@ -52,4 +52,8 @@ module.exports = async function migrate(options) {
     console.error(err.message);
     process.exit(exitCodes.MIGRATION_FAILED);
   }
+
+  // The Platform Client SDK keeps HTTP connections open; Node won't exit
+  // naturally. Exit explicitly now that all work is done.
+  process.exit(exitCodes.SUCCESS);
 };

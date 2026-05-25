@@ -94,4 +94,5 @@ module.exports = async function repair(options) {
   }
 
   console.log(`Repair complete. ${repaired} record(s) updated.`);
+  process.exit(exitCodes.SUCCESS);
 };

@@ -40,7 +40,7 @@ module.exports = async function baseline(options) {
 
   if (unrecorded.length === 0) {
     console.log('All migrations are already recorded. Nothing to baseline.');
-    return;
+    process.exit(exitCodes.SUCCESS);
   }
 
   for (const m of unrecorded) {
@@ -59,4 +59,5 @@ module.exports = async function baseline(options) {
   }
 
   console.log(`Done. ${unrecorded.length} migration(s) marked as applied.`);
+  process.exit(exitCodes.SUCCESS);
 };

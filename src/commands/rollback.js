@@ -37,7 +37,7 @@ module.exports = async function rollback(options) {
 
   if (applied.length === 0) {
     console.log('No applied migrations to roll back.');
-    return;
+    process.exit(exitCodes.SUCCESS);
   }
 
   const last = applied[0];
@@ -97,4 +97,6 @@ module.exports = async function rollback(options) {
     console.error(`Rollback of ${last.key} failed: ${err.message}`);
     process.exit(exitCodes.MIGRATION_FAILED);
   }
+
+  process.exit(exitCodes.SUCCESS);
 };
