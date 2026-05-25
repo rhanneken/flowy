@@ -25,14 +25,17 @@ function makePlatformClient() {
 }
 
 function makeArchScripting(sessionObj = {}) {
+  const archSession = {
+    endTerminatesProcess: true,
+    endExitCode: 0,
+    startWithClientIdAndSecret: vi.fn(async (region, callbackStart) => {
+      await callbackStart(sessionObj);
+    }),
+  };
   return {
-    environment: {
-      archSession: {
-        endTerminatesProcess: true,
-        startWithClientIdAndSecret: vi.fn(async (region, callbackStart) => {
-          await callbackStart(sessionObj);
-        }),
-      },
+    environment: { archSession },
+    services: {
+      archLogging: { setLoggingCallback: vi.fn() },
     },
   };
 }

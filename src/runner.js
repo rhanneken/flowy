@@ -75,6 +75,15 @@ async function runMigrations(
   // we manage our own exit codes in the CLI layer.
   archSession.endTerminatesProcess = false;
 
+  // Capture SDK error messages so we can report the real reason if the
+  // session ends with exit code 99 instead of showing a cryptic message.
+  const sdkErrors = [];
+  scripting.services.archLogging.setLoggingCallback((logItem) => {
+    if (logItem.logType === 'error') {
+      sdkErrors.push(logItem.messageFull);
+    }
+  });
+
   // Capture any error from the callback so we can re-throw it after the
   // session ends cleanly, rather than letting it become an unhandled SDK
   // exception (which would set exit code 99).
@@ -96,6 +105,14 @@ async function runMigrations(
     () => {},   // callbackFunctionEnd — required for the SDK to call _endSession() after our callback resolves
     true,       // isClientCredentialsOAuthClient
   );
+
+  if (archSession.endExitCode === 99) {
+    const reason = sdkErrors.length > 0 ? sdkErrors.join('\n') : 'Unknown Architect Scripting error.';
+    throw new FlowyCLIError(
+      `Architect Scripting session failed:\n${reason}`,
+      MIGRATION_FAILED,
+    );
+  }
 
   if (callbackError) throw callbackError;
 }
