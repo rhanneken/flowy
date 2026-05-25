@@ -65,11 +65,19 @@ module.exports = async function rollback(options) {
 
   const scripting = require('purecloud-flow-scripting-api-sdk-javascript');
   const archSession = scripting.environment.archSession;
+  const locations = archSession._locations || {};
+  const locationEntry = Object.entries(locations)
+    .find(([, loc]) => loc.host === `apps.${config.env.region}`);
+  if (!locationEntry) {
+    console.error(`No Architect Scripting location found for region "${config.env.region}".`);
+    process.exit(exitCodes.CONFIG_ERROR);
+  }
+  const orgLocation = locationEntry[0];
   archSession.endTerminatesProcess = false;
   let rollbackError = null;
   try {
     await archSession.startWithClientIdAndSecret(
-      config.env.region,
+      orgLocation,
       async (architectSession) => {
         try {
           await migration.module.down(architectSession, platformClient);

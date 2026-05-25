@@ -28,7 +28,8 @@ function makeArchScripting(sessionObj = {}) {
   const archSession = {
     endTerminatesProcess: true,
     endExitCode: 0,
-    startWithClientIdAndSecret: vi.fn(async (region, callbackStart) => {
+    _locations: { prod_us_east_1: { host: 'apps.mypurecloud.com' } },
+    startWithClientIdAndSecret: vi.fn(async (orgLocation, callbackStart) => {
       await callbackStart(sessionObj);
     }),
   };
