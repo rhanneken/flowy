@@ -93,7 +93,7 @@ async function runMigrations(
     },
     env.clientId,
     env.clientSecret,
-    undefined,  // callbackFunctionEnd
+    () => {},   // callbackFunctionEnd — required for the SDK to call _endSession() after our callback resolves
     true,       // isClientCredentialsOAuthClient
   );
 

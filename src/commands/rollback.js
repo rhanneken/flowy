@@ -79,7 +79,7 @@ module.exports = async function rollback(options) {
       },
       config.env.clientId,
       config.env.clientSecret,
-      undefined,  // callbackFunctionEnd
+      () => {},   // callbackFunctionEnd — required for the SDK to call _endSession() after our callback resolves
       true,       // isClientCredentialsOAuthClient
     );
     if (rollbackError) throw rollbackError;
