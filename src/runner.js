@@ -68,18 +68,21 @@ async function runMigrations(
   console.log(`Found ${pending.length} pending migration(s).`);
 
   // 3. Run all pending migrations inside a single ArchScripting session
-  const ArchScripting = _archScripting || require('purecloud-flow-scripting-api-sdk-javascript');
+  const scripting = _archScripting || require('purecloud-flow-scripting-api-sdk-javascript');
+  const archSession = scripting.environment.archSession;
 
-  await ArchScripting.run({
-    clientId: env.clientId,
-    clientSecret: env.clientSecret,
-    region: env.region,
-    doWork: async (architectSession) => {
+  await archSession.startWithClientIdAndSecret(
+    env.region,
+    async (architectSession) => {
       for (const migration of pending) {
         await runOne(migration, architectSession, platformClient, options);
       }
     },
-  });
+    env.clientId,
+    env.clientSecret,
+    undefined,  // callbackFunctionEnd
+    true,       // isClientCredentialsOAuthClient
+  );
 }
 
 async function runOne(migration, architectSession, platformClient, options) {

@@ -63,16 +63,18 @@ module.exports = async function rollback(options) {
     process.exit(exitCodes.MIGRATION_FAILED);
   }
 
-  const architectScripting = require('purecloud-flow-scripting-api-sdk-javascript');
+  const scripting = require('purecloud-flow-scripting-api-sdk-javascript');
   try {
-    await architectScripting.run({
-      clientId: config.env.clientId,
-      clientSecret: config.env.clientSecret,
-      region: config.env.region,
-      doWork: async (architectSession) => {
+    await scripting.environment.archSession.startWithClientIdAndSecret(
+      config.env.region,
+      async (architectSession) => {
         await migration.module.down(architectSession, platformClient);
       },
-    });
+      config.env.clientId,
+      config.env.clientSecret,
+      undefined,  // callbackFunctionEnd
+      true,       // isClientCredentialsOAuthClient
+    );
     await updateStatus(platformClient, last.key, 'rolled_back');
     console.log(`✓ ${last.key} rolled back.`);
   } catch (err) {

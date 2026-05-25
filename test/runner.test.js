@@ -26,9 +26,13 @@ function makePlatformClient() {
 
 function makeArchScripting(sessionObj = {}) {
   return {
-    run: vi.fn(async ({ doWork }) => {
-      await doWork(sessionObj);
-    }),
+    environment: {
+      archSession: {
+        startWithClientIdAndSecret: vi.fn(async (region, callbackStart) => {
+          await callbackStart(sessionObj);
+        }),
+      },
+    },
   };
 }
 
