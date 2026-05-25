@@ -129,13 +129,13 @@ async function runMigrations(
   }
 }
 
-async function runOne(migration, architectSession, platformClient, options) {
+async function runOne(migration, scripting, platformClient, options) {
   console.log(`Applying ${migration.version}: ${migration.module.description}`);
 
   // Pre-migration snapshot
   if (migration.module.flows && migration.module.flows.length > 0) {
     await snapshotFlows(
-      architectSession,
+      scripting,
       migration.module.flows,
       platformClient,
     );
@@ -145,7 +145,7 @@ async function runOne(migration, architectSession, platformClient, options) {
   const startTime = Date.now();
 
   try {
-    await migration.module.up(architectSession, platformClient);
+    await migration.module.up(scripting, platformClient);
     const executionTime = Date.now() - startTime;
 
     await record(platformClient, {
