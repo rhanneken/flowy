@@ -41,8 +41,8 @@ my-genesys-project/
 ├── .env
 ├── flowy.config.js
 └── migrations/
-    ├── V001__add_greeting_prompt.js
-    └── V002__add_callback_menu.ts
+    ├── 20240524091500_add_greeting_prompt.js
+    └── 20240525143022_add_callback_menu.ts
 ```
 
 ---
@@ -78,7 +78,7 @@ Flowy loads `.env` automatically via [dotenv](https://github.com/motdotla/dotenv
 
 ## Migration files
 
-Migration files are named `V<NNN>__<description>.js` (or `.ts`) using sequential integers. Create them with `flowy create` or by hand.
+Migration files are named `<YYYYMMDDHHMMSS>_<description>.js` (or `.ts`), where the prefix is a UTC timestamp generated at creation time. Create them with `flowy create` or by hand.
 
 Each file exports:
 
@@ -106,7 +106,7 @@ Consult the [Architect Scripting SDK documentation](https://mypurecloud.github.i
 ### JavaScript example
 
 ```js
-// migrations/V001__add_greeting_prompt.js
+// migrations/20240524091500_add_greeting_prompt.js
 module.exports = {
   description: 'Add greeting prompt to main inbound flow',
 
@@ -133,7 +133,7 @@ module.exports = {
 ### TypeScript example
 
 ```ts
-// migrations/V002__add_callback_menu.ts
+// migrations/20240525143022_add_callback_menu.ts
 import type { FlowMigration } from '@rhanneken/flowy/types/FlowMigration';
 import type { ArchitectScripting } from 'purecloud-flow-scripting-api-sdk-javascript';
 
@@ -179,11 +179,12 @@ Projects using only `.js` migrations have no TypeScript dependency.
 | `flowy create <description>` | Create the next migration file |
 | `flowy create --ts <description>` | Create a TypeScript migration file |
 | `flowy migrate` | Apply all pending migrations |
-| `flowy migrate --target V005` | Apply migrations up to and including V005 |
-| `flowy migrate --strict` | Fail (rather than warn) on checksum mismatches |
+| `flowy migrate --target 20240525143022` | Apply migrations up to and including the given version |
+| `flowy migrate --date 20240525` | Apply all migrations created up to the end of the given date (UTC) |
+| `flowy migrate --strict` | Fail (rather than warn) on checksum mismatches or out-of-order migrations |
 | `flowy rollback` | Undo the last applied migration |
 | `flowy status` | Show applied, pending, and failed migrations |
-| `flowy validate` | Check for missing version numbers or structural errors (local only) |
+| `flowy validate` | Check for duplicate versions or structural errors (local only) |
 | `flowy repair` | Fix history table problems interactively |
 | `flowy baseline` | Mark all existing migrations as applied without running them |
 | `flowy unlock <flow-name>` | Force-unlock a flow left locked by a failed migration |
