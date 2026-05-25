@@ -6,6 +6,7 @@ const { record } = require('./historyStore');
 const { getAppliedBy } = require('./appliedBy');
 const { FlowyCLIError } = require('./config');
 const { MIGRATION_FAILED } = require('./exitCodes');
+const { resolveOrgLocation } = require('./archSession');
 
 /**
  * Core migration runner. Authenticates the Architect Scripting SDK, iterates
@@ -71,21 +72,7 @@ async function runMigrations(
   const scripting = _archScripting || require('purecloud-flow-scripting-api-sdk-javascript');
   const archSession = scripting.environment.archSession;
 
-  // The Architect Scripting SDK uses internal location identifiers (e.g.
-  // 'prod_us_east_1') rather than the domain-based region used by the
-  // Platform API Client (e.g. 'mypurecloud.com'). Reverse-lookup the
-  // identifier by matching the host 'apps.{region}' in the SDK's locations.
-  const locations = archSession._locations || {};
-  const locationEntry = Object.entries(locations)
-    .find(([, loc]) => loc.host === `apps.${env.region}`);
-  if (!locationEntry) {
-    throw new FlowyCLIError(
-      `No Architect Scripting location found for region "${env.region}". ` +
-      `Valid regions: ${Object.values(locations).map((l) => l.host.replace('apps.', '')).join(', ')}`,
-      MIGRATION_FAILED,
-    );
-  }
-  const orgLocation = locationEntry[0];
+  const orgLocation = resolveOrgLocation(env.region, scripting);
 
   // Prevent the SDK from calling process.exit() when the session ends —
   // we manage our own exit codes in the CLI layer.

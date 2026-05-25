@@ -5,6 +5,7 @@ const { loadMigrations } = require('../migrationLoader');
 const { ensureTable, getAllRows, updateStatus, resetCache } = require('../historyStore');
 const { authenticatePlatformClient } = require('../gcAuth');
 const exitCodes = require('../exitCodes');
+const { resolveOrgLocation } = require('../archSession');
 
 module.exports = async function rollback(options) {
   resetCache();
@@ -64,15 +65,14 @@ module.exports = async function rollback(options) {
   }
 
   const scripting = require('purecloud-flow-scripting-api-sdk-javascript');
-  const archSession = scripting.environment.archSession;
-  const locations = archSession._locations || {};
-  const locationEntry = Object.entries(locations)
-    .find(([, loc]) => loc.host === `apps.${config.env.region}`);
-  if (!locationEntry) {
-    console.error(`No Architect Scripting location found for region "${config.env.region}".`);
-    process.exit(exitCodes.CONFIG_ERROR);
+  let orgLocation;
+  try {
+    orgLocation = resolveOrgLocation(config.env.region, scripting);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(err.exitCode ?? exitCodes.CONFIG_ERROR);
   }
-  const orgLocation = locationEntry[0];
+  const archSession = scripting.environment.archSession;
   archSession.endTerminatesProcess = false;
   let rollbackError = null;
   try {
