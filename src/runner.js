@@ -97,7 +97,7 @@ async function runMigrations(
     async () => {
       try {
         for (const migration of pending) {
-          await runOne(migration, archSession, platformClient, options);
+          await runOne(migration, scripting, platformClient, options);
         }
       } catch (err) {
         callbackError = err;

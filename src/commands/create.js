@@ -12,12 +12,15 @@ module.exports = {
   // Optional: list flow names to check in before up() runs (pre-migration snapshot).
   // flows: ['MyFlow'],
 
-  async up(architectSession, platformClient) {
-    // Your migration logic here.
-    // You are responsible for calling validate(), checkIn(), and publish() as needed.
+  async up(scripting, platformClient) {
+    // const flows = scripting.factories.archFactoryFlows;
+    // const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MyFlow', 'inboundCall');
+    // ... make changes ...
+    // await flow.checkInAsync('${version}: ${description}');
+    // await flow.publishAsync();
   },
 
-  // async down(architectSession, platformClient) {
+  // async down(scripting, platformClient) {
   //   // Optional rollback logic.
   // },
 };
@@ -29,12 +32,15 @@ const TS_TEMPLATE = (version, description) => `export default {
   // Optional: list flow names to check in before up() runs (pre-migration snapshot).
   // flows: ['MyFlow'],
 
-  async up(architectSession: any, platformClient: any): Promise<void> {
-    // Your migration logic here.
-    // You are responsible for calling validate(), checkIn(), and publish() as needed.
+  async up(scripting: any, platformClient: any): Promise<void> {
+    // const flows = scripting.factories.archFactoryFlows;
+    // const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MyFlow', 'inboundCall');
+    // ... make changes ...
+    // await flow.checkInAsync('${version}: ${description}');
+    // await flow.publishAsync();
   },
 
-  // async down(architectSession: any, platformClient: any): Promise<void> {
+  // async down(scripting: any, platformClient: any): Promise<void> {
   //   // Optional rollback logic.
   // },
 };

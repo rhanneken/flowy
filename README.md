@@ -85,11 +85,23 @@ Each file exports:
 | Export | Required | Description |
 |--------|----------|-------------|
 | `description` | ✓ | Human-readable string stored in migration history |
-| `up(architectSession, platformClient)` | ✓ | Applies the migration |
-| `down(architectSession, platformClient)` | | Rolls back the migration (required for `flowy rollback`) |
+| `up(scripting, platformClient)` | ✓ | Applies the migration |
+| `down(scripting, platformClient)` | | Rolls back the migration (required for `flowy rollback`) |
 | `flows` | | Array of flow names to check in before `up()` runs, creating a recoverable snapshot |
 
-You are responsible for calling `validate()`, `checkIn()`, and `publish()` inside `up()`. Flowy does not call them on your behalf.
+You are responsible for calling `checkIn()` and `publish()` inside `up()`. Flowy does not call them on your behalf.
+
+### The `scripting` argument
+
+The first argument to `up()` and `down()` is the full [`purecloud-flow-scripting-api-sdk-javascript`](https://github.com/MyPureCloud/purecloud-flow-scripting-api-sdk-javascript) module, authenticated and ready to use. The parts you'll use most:
+
+| Property | What it is |
+|----------|-----------|
+| `scripting.factories.archFactoryFlows` | Load, create, and check out flows |
+| `scripting.environment.archSession` | The active session (auth token, org info, etc.) |
+| `scripting.viewModels.flows` | Flow view model definitions |
+
+Consult the [Architect Scripting SDK documentation](https://mypurecloud.github.io/purecloud-flow-scripting-api-sdk-javascript/) for the full API reference.
 
 ### JavaScript example
 
@@ -102,19 +114,19 @@ module.exports = {
   // creating a snapshot you can recover from if the migration fails.
   flows: ['MainInbound'],
 
-  async up(architectSession, platformClient) {
-    const flow = await architectSession.flows.getFlowByName('MainInbound');
-    // ... make changes ...
-    const result = await flow.validate();
-    if (!result.isSuccess) throw new Error(result.errors.join('\n'));
-    await flow.checkIn('V001: add greeting prompt');
-    await flow.publish();
+  async up(scripting, platformClient) {
+    const flows = scripting.factories.archFactoryFlows;
+    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MainInbound', 'inboundCall');
+    // ... make changes to flow ...
+    await flow.checkInAsync('V001: add greeting prompt');
+    await flow.publishAsync();
   },
 
-  async down(architectSession, platformClient) {
-    const flow = await architectSession.flows.getFlowByName('MainInbound');
+  async down(scripting, platformClient) {
+    const flows = scripting.factories.archFactoryFlows;
+    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MainInbound', 'inboundCall');
     // ... undo changes ...
-    await flow.checkIn('V001 rolled back');
+    await flow.checkInAsync('V001 rolled back');
   },
 };
 ```
@@ -127,19 +139,19 @@ export default {
   description: 'Add callback menu to support flow',
   flows: ['SupportInbound'],
 
-  async up(architectSession: any, platformClient: any): Promise<void> {
-    const flow = await architectSession.flows.getFlowByName('SupportInbound');
-    // ... make changes ...
-    const result = await flow.validate();
-    if (!result.isSuccess) throw new Error(result.errors.join('\n'));
-    await flow.checkIn('V002: add callback menu');
-    await flow.publish();
+  async up(scripting: any, platformClient: any): Promise<void> {
+    const flows = scripting.factories.archFactoryFlows;
+    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('SupportInbound', 'inboundCall');
+    // ... make changes to flow ...
+    await flow.checkInAsync('V002: add callback menu');
+    await flow.publishAsync();
   },
 
-  async down(architectSession: any, platformClient: any): Promise<void> {
-    const flow = await architectSession.flows.getFlowByName('SupportInbound');
+  async down(scripting: any, platformClient: any): Promise<void> {
+    const flows = scripting.factories.archFactoryFlows;
+    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('SupportInbound', 'inboundCall');
     // ... undo changes ...
-    await flow.checkIn('V002 rolled back');
+    await flow.checkInAsync('V002 rolled back');
   },
 };
 ```

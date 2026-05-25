@@ -80,7 +80,7 @@ module.exports = async function rollback(options) {
       orgLocation,
       async () => {
         try {
-          await migration.module.down(archSession, platformClient);
+          await migration.module.down(scripting, platformClient);
         } catch (err) {
           rollbackError = err;
         }
