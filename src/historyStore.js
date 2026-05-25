@@ -120,7 +120,8 @@ async function getAllRows(platformClient) {
   const allEntities = [];
   let pageNumber = 1;
   while (true) {
-    const result = await api.getFlowsDatatableRows(tableId, { pageSize: 100, pageNumber });
+    // showbrief: false is required — the default (true) returns only the key field.
+    const result = await api.getFlowsDatatableRows(tableId, { pageSize: 100, pageNumber, showbrief: false });
     const entities = result.entities || [];
     allEntities.push(...entities);
     if (!result.pageCount || pageNumber >= result.pageCount) break;
