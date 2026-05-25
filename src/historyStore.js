@@ -9,6 +9,7 @@ const TABLE_SCHEMA = {
   $schema: 'http://json-schema.org/draft-04/schema#',
   type: 'object',
   additionalProperties: false,
+  required: ['key', 'description', 'filename', 'checksum', 'appliedAt', 'appliedBy', 'executionTime', 'status'],
   properties: {
     key:           { type: 'string',  title: 'key' },
     description:   { type: 'string',  title: 'description' },
