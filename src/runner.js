@@ -71,11 +71,24 @@ async function runMigrations(
   const scripting = _archScripting || require('purecloud-flow-scripting-api-sdk-javascript');
   const archSession = scripting.environment.archSession;
 
+  // Prevent the SDK from calling process.exit() when the session ends —
+  // we manage our own exit codes in the CLI layer.
+  archSession.endTerminatesProcess = false;
+
+  // Capture any error from the callback so we can re-throw it after the
+  // session ends cleanly, rather than letting it become an unhandled SDK
+  // exception (which would set exit code 99).
+  let callbackError = null;
+
   await archSession.startWithClientIdAndSecret(
     env.region,
     async (architectSession) => {
-      for (const migration of pending) {
-        await runOne(migration, architectSession, platformClient, options);
+      try {
+        for (const migration of pending) {
+          await runOne(migration, architectSession, platformClient, options);
+        }
+      } catch (err) {
+        callbackError = err;
       }
     },
     env.clientId,
@@ -83,6 +96,8 @@ async function runMigrations(
     undefined,  // callbackFunctionEnd
     true,       // isClientCredentialsOAuthClient
   );
+
+  if (callbackError) throw callbackError;
 }
 
 async function runOne(migration, architectSession, platformClient, options) {

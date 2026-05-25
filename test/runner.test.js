@@ -28,6 +28,7 @@ function makeArchScripting(sessionObj = {}) {
   return {
     environment: {
       archSession: {
+        endTerminatesProcess: true,
         startWithClientIdAndSecret: vi.fn(async (region, callbackStart) => {
           await callbackStart(sessionObj);
         }),
