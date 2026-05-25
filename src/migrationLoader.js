@@ -9,13 +9,20 @@ const MIGRATION_PATTERN = /^(V\d+)__(.+)\.(js|ts)$/;
 
 /**
  * Register tsx loader if TypeScript migrations are present and tsx is available.
+ * Searches the user's project node_modules first (devDependencies), then falls
+ * back to flowy's own resolution chain (covers globally installed tsx).
  * @param {string[]} filenames
  */
 function maybeRegisterTsx(filenames) {
   const hasTs = filenames.some((f) => f.endsWith('.ts'));
   if (!hasTs) return;
   try {
-    require('tsx/cjs'); // registers tsx as a CJS loader
+    const searchPaths = [
+      join(process.cwd(), 'node_modules'),
+      ...(require.resolve.paths('tsx/cjs') || []),
+    ];
+    const tsxPath = require.resolve('tsx/cjs', { paths: searchPaths });
+    require(tsxPath); // registers tsx as a CJS loader
   } catch {
     throw new FlowyCLIError(
       'TypeScript migration files detected but `tsx` is not installed.\n' +
