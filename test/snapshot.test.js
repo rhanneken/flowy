@@ -15,7 +15,7 @@ function makeScripting(flowsByName = {}) {
 
 function makePlatformClient(flowsByName = {}) {
   return {
-    FlowsApi: vi.fn(() => ({
+    ArchitectApi: vi.fn(() => ({
       getFlows: vi.fn(async ({ name }) => ({
         entities: flowsByName[name] ? [{ name, type: 'inboundCall' }] : [],
       })),

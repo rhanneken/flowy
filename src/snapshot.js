@@ -15,7 +15,7 @@
 async function snapshotFlows(scripting, flows, label, platformClient) {
   if (!flows || flows.length === 0) return;
 
-  const flowsApi = new platformClient.FlowsApi();
+  const flowsApi = new platformClient.ArchitectApi();
   const archFactoryFlows = scripting.factories.archFactoryFlows;
 
   for (const flowName of flows) {
