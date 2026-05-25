@@ -2,6 +2,7 @@
   "name": "@rhanneken/flowy",
   "version": "0.1.0",
   "description": "Genesys Cloud flow migration tool",
+  "license": "0BSD",
   "bin": { "flowy": "bin/flowy.js" },
   "types": "types/FlowMigration.d.ts",
   "files": [

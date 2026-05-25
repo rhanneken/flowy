@@ -223,4 +223,4 @@ The single escape hatch for history table problems:
 
 ## License
 
-MIT
+[BSD Zero Clause License](LICENSE) — do whatever you want with it.
