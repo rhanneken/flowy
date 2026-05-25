@@ -27,13 +27,16 @@ module.exports = {
 };
 `;
 
-const TS_TEMPLATE = (version, description) => `export default {
+const TS_TEMPLATE = (version, description) => `import type { FlowMigration } from '@rhanneken/flowy/types/FlowMigration';
+import type { ArchitectScripting } from 'purecloud-flow-scripting-api-sdk-javascript';
+
+const migration: FlowMigration = {
   description: ${JSON.stringify(description)},
 
   // Optional: list flow names to check in before up() runs (pre-migration snapshot).
   // flows: ['MyFlow'],
 
-  async up(scripting: any, platformClient: any): Promise<void> {
+  async up(scripting: ArchitectScripting, platformClient: any): Promise<void> {
     // const flows = scripting.factories.archFactoryFlows;
     // const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MyFlow', 'inboundcall');
     // ... make changes ...
@@ -42,10 +45,12 @@ const TS_TEMPLATE = (version, description) => `export default {
     // await flow.checkInAsync();  // check in only (releases lock)
   },
 
-  // async down(scripting: any, platformClient: any): Promise<void> {
+  // async down(scripting: ArchitectScripting, platformClient: any): Promise<void> {
   //   // Optional rollback logic.
   // },
 };
+
+export default migration;
 `;
 
 module.exports = function create(description, options) {

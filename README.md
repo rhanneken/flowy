@@ -134,25 +134,32 @@ module.exports = {
 
 ```ts
 // migrations/V002__add_callback_menu.ts
-export default {
+import type { FlowMigration } from '@rhanneken/flowy/types/FlowMigration';
+import type { ArchitectScripting } from 'purecloud-flow-scripting-api-sdk-javascript';
+
+const migration: FlowMigration = {
   description: 'Add callback menu to support flow',
   flows: ['SupportInbound'],
 
-  async up(scripting: any, platformClient: any): Promise<void> {
+  async up(scripting: ArchitectScripting, platformClient: any): Promise<void> {
     const flows = scripting.factories.archFactoryFlows;
     const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('SupportInbound', 'inboundcall');
     // ... make changes to flow ...
     await flow.publishAsync();  // validate, save, and publish — releases the lock
   },
 
-  async down(scripting: any, platformClient: any): Promise<void> {
+  async down(scripting: ArchitectScripting, platformClient: any): Promise<void> {
     const flows = scripting.factories.archFactoryFlows;
     const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('SupportInbound', 'inboundcall');
     // ... undo changes ...
     await flow.checkInAsync();  // check in only (no publish) — releases the lock
   },
 };
+
+export default migration;
 ```
+
+The `FlowMigration` interface and the `ArchitectScripting` type are both optional — you can omit them and use `any` if you prefer less verbosity. `platformClient` is typed as `any` because the Platform Client SDK's TypeScript module declaration does not export its API classes.
 
 TypeScript support requires [`tsx`](https://github.com/privatenumber/tsx) as an optional peer dependency:
 
