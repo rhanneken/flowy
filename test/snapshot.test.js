@@ -13,27 +13,50 @@ function makeScripting(flowsByName = {}) {
   };
 }
 
+/**
+ * @param {Record<string, { locked?: boolean }>} flowsByName
+ *   Pass `{ locked: true }` to simulate a flow that is currently checked out
+ *   (has a draft). Pass `{}` or `{ locked: false }` for a cleanly checked-in flow.
+ */
 function makePlatformClient(flowsByName = {}) {
   return {
     ArchitectApi: vi.fn(() => ({
-      getFlows: vi.fn(async ({ name }) => ({
-        // The real Platform API returns flow types in uppercase
-        entities: flowsByName[name] ? [{ name, type: 'INBOUNDCALL' }] : [],
-      })),
+      getFlows: vi.fn(async ({ name }) => {
+        if (!flowsByName[name]) return { entities: [] };
+        const locked = flowsByName[name].locked ?? false;
+        return {
+          entities: [{
+            name,
+            type: 'INBOUNDCALL',
+            // Simulate the Platform API lock fields.  A locked flow has a
+            // lockedClient entry; an already-checked-in flow has neither.
+            ...(locked ? { lockedClient: { id: 'some-client-id' } } : {}),
+          }],
+        };
+      }),
     })),
   };
 }
 
 describe('snapshotFlows', () => {
-  it('checks out and checks in each declared flow', async () => {
+  it('checks out and checks in a flow that is currently locked (has a draft)', async () => {
     const { snapshotFlows } = await import('../src/snapshot.js');
     const flow = { checkInAsync: vi.fn(async () => {}) };
     const scripting = makeScripting({ MainInbound: flow });
-    const platformClient = makePlatformClient({ MainInbound: true });
+    const platformClient = makePlatformClient({ MainInbound: { locked: true } });
     await snapshotFlows(scripting, ['MainInbound'], platformClient);
     expect(scripting.factories.archFactoryFlows.checkoutAndLoadFlowByFlowNameAsync)
       .toHaveBeenCalledWith('MainInbound', 'inboundcall');
     expect(flow.checkInAsync).toHaveBeenCalledWith();
+  });
+
+  it('skips checkout when the flow is already checked in (no draft)', async () => {
+    const { snapshotFlows } = await import('../src/snapshot.js');
+    const scripting = makeScripting({ MainInbound: {} });
+    const platformClient = makePlatformClient({ MainInbound: { locked: false } });
+    await snapshotFlows(scripting, ['MainInbound'], platformClient);
+    expect(scripting.factories.archFactoryFlows.checkoutAndLoadFlowByFlowNameAsync)
+      .not.toHaveBeenCalled();
   });
 
   it('does nothing when flows array is empty or absent', async () => {

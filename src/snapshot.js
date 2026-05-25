@@ -1,11 +1,14 @@
 'use strict';
 
 /**
- * Check in each flow listed in the flows array before a migration runs.
- * This creates a recoverable snapshot in GC version history.
+ * Check in each flow listed in the flows array before a migration runs,
+ * but only if the flow currently has a draft (is locked/checked out).
+ * If the flow is already cleanly checked in, its most recent checked-in
+ * version already serves as the snapshot — no checkout+checkin needed.
  *
- * Uses the Platform Client API to discover each flow's type (required by
- * the Architect Scripting SDK), then checks the flow out and checks it in.
+ * Uses the Platform Client API to discover each flow's type and lock state
+ * (required by the Architect Scripting SDK), then conditionally checks the
+ * flow out and back in to create a recoverable version.
  *
  * @param {object} scripting        The purecloud-flow-scripting-api-sdk-javascript module
  * @param {string[]|null|undefined} flows  Flow names to snapshot
@@ -18,8 +21,7 @@ async function snapshotFlows(scripting, flows, platformClient) {
   const archFactoryFlows = scripting.factories.archFactoryFlows;
 
   for (const flowName of flows) {
-    // Discover the flow type via the Platform API (required by the Architect
-    // Scripting SDK — it cannot load a flow by name without knowing its type).
+    // Discover the flow's type and current lock state via the Platform API.
     const results = await flowsApi.getFlows({ name: flowName });
     const flowInfo = (results.entities || []).find((f) => f.name === flowName);
     if (!flowInfo) {
@@ -29,11 +31,18 @@ async function snapshotFlows(scripting, flows, platformClient) {
       );
     }
 
-    // Check out the flow and load it, then check it in to create the snapshot.
+    // If the flow is not checked out by anyone, the most recent checked-in
+    // version is already a clean recovery point — skip the checkout+checkin.
+    if (!flowInfo.lockedUser && !flowInfo.lockedClient) {
+      continue;
+    }
+
+    // The flow has a draft (it is locked/checked out). Check it in now so
+    // there is a recoverable snapshot before up() runs.
     // The Platform API returns flow types in uppercase (e.g. 'INBOUNDCALL'),
     // but the Architect Scripting SDK requires lowercase ('inboundcall').
     // checkInAsync() takes an optional boolean (ensureSearchable) — there is
-    // no label/comment parameter in the SDK.
+    // no label/comment parameter.
     const flow = await archFactoryFlows.checkoutAndLoadFlowByFlowNameAsync(
       flowName,
       flowInfo.type.toLowerCase(),
