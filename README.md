@@ -118,15 +118,14 @@ module.exports = {
     const flows = scripting.factories.archFactoryFlows;
     const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MainInbound', 'inboundcall');
     // ... make changes to flow ...
-    await flow.checkInAsync();
-    await flow.publishAsync();
+    await flow.publishAsync();  // validate, save, and publish — releases the lock
   },
 
   async down(scripting, platformClient) {
     const flows = scripting.factories.archFactoryFlows;
     const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MainInbound', 'inboundcall');
     // ... undo changes ...
-    await flow.checkInAsync();
+    await flow.checkInAsync();  // check in only (no publish) — releases the lock
   },
 };
 ```
@@ -143,15 +142,14 @@ export default {
     const flows = scripting.factories.archFactoryFlows;
     const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('SupportInbound', 'inboundcall');
     // ... make changes to flow ...
-    await flow.checkInAsync();
-    await flow.publishAsync();
+    await flow.publishAsync();  // validate, save, and publish — releases the lock
   },
 
   async down(scripting: any, platformClient: any): Promise<void> {
     const flows = scripting.factories.archFactoryFlows;
     const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('SupportInbound', 'inboundcall');
     // ... undo changes ...
-    await flow.checkInAsync();
+    await flow.checkInAsync();  // check in only (no publish) — releases the lock
   },
 };
 ```

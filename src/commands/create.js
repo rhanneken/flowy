@@ -16,8 +16,9 @@ module.exports = {
     // const flows = scripting.factories.archFactoryFlows;
     // const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MyFlow', 'inboundcall');
     // ... make changes ...
-    // await flow.checkInAsync();
-    // await flow.publishAsync();
+    // await flow.publishAsync();  // validate, save, and publish (releases lock)
+    // -- OR (to save a checkpoint without publishing) --
+    // await flow.checkInAsync();  // check in only (releases lock)
   },
 
   // async down(scripting, platformClient) {
@@ -36,8 +37,9 @@ const TS_TEMPLATE = (version, description) => `export default {
     // const flows = scripting.factories.archFactoryFlows;
     // const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MyFlow', 'inboundcall');
     // ... make changes ...
-    // await flow.checkInAsync();
-    // await flow.publishAsync();
+    // await flow.publishAsync();  // validate, save, and publish (releases lock)
+    // -- OR (to save a checkpoint without publishing) --
+    // await flow.checkInAsync();  // check in only (releases lock)
   },
 
   // async down(scripting: any, platformClient: any): Promise<void> {

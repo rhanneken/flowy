@@ -173,7 +173,7 @@ async function runOne(migration, architectSession, platformClient, options) {
         appliedBy: getAppliedBy(),
         executionTime,
         status: 'failed',
-        error: err.message,
+        error: err.message || String(err),
       });
     } catch (historyErr) {
       console.error(
@@ -183,7 +183,7 @@ async function runOne(migration, architectSession, platformClient, options) {
       );
     }
 
-    console.error(`  ✗ ${migration.version} failed: ${err.message}`);
+    console.error(`  ✗ ${migration.version} failed: ${err.message || String(err)}`);
     throw err;
   }
 }
