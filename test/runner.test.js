@@ -15,11 +15,11 @@ function makeTempMigration(name, content) {
 function makePlatformClient() {
   return {
     ApiClient: { instance: { setEnvironment: vi.fn(), loginClientCredentialsGrant: vi.fn(async () => {}) } },
-    DataTablesApi: vi.fn(() => ({
+    ArchitectApi: vi.fn(() => ({
       getFlowsDatatables: vi.fn(async () => ({ entities: [{ id: 't1', name: '_flowy_migrations' }] })),
       getFlowsDatatableRows: vi.fn(async () => ({ entities: [] })),
-      createFlowsDatatableRow: vi.fn(async () => {}),
-      updateFlowsDatatableRow: vi.fn(async () => {}),
+      postFlowsDatatableRows: vi.fn(async () => {}),
+      putFlowsDatatableRow: vi.fn(async () => {}),
     })),
   };
 }

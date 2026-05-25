@@ -41,7 +41,7 @@ function resetCache() {
 async function ensureTable(platformClient) {
   if (cachedTableId) return cachedTableId;
 
-  const api = new platformClient.DataTablesApi();
+  const api = new platformClient.ArchitectApi();
 
   try {
     const result = await api.getFlowsDatatables();
@@ -86,12 +86,12 @@ async function getRow(platformClient, version) {
  */
 async function record(platformClient, entry) {
   const tableId = await ensureTable(platformClient);
-  const api = new platformClient.DataTablesApi();
+  const api = new platformClient.ArchitectApi();
   const existing = await getRow(platformClient, entry.key);
   if (existing) {
-    await api.updateFlowsDatatableRow(tableId, entry.key, entry);
+    await api.putFlowsDatatableRow(tableId, entry.key, { body: entry });
   } else {
-    await api.createFlowsDatatableRow(tableId, entry);
+    await api.postFlowsDatatableRows(tableId, entry);
   }
 }
 
@@ -104,8 +104,8 @@ async function record(platformClient, entry) {
  */
 async function updateStatus(platformClient, version, status, extra = {}) {
   const tableId = await ensureTable(platformClient);
-  const api = new platformClient.DataTablesApi();
-  await api.updateFlowsDatatableRow(tableId, version, { status, ...extra });
+  const api = new platformClient.ArchitectApi();
+  await api.putFlowsDatatableRow(tableId, version, { body: { status, ...extra } });
 }
 
 /**
@@ -115,7 +115,7 @@ async function updateStatus(platformClient, version, status, extra = {}) {
  */
 async function getAllRows(platformClient) {
   const tableId = await ensureTable(platformClient);
-  const api = new platformClient.DataTablesApi();
+  const api = new platformClient.ArchitectApi();
   const allEntities = [];
   let pageNumber = 1;
   while (true) {

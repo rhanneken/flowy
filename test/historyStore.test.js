@@ -15,11 +15,12 @@ function makePlatformClient(overrides = {}) {
       return { id: tableId, name: body.name };
     }),
     getFlowsDatatableRows: vi.fn(async () => ({ entities: [...rows] })),
-    createFlowsDatatableRow: vi.fn(async (id, row) => {
+    postFlowsDatatableRows: vi.fn(async (id, row) => {
       rows.push({ ...row });
       return row;
     }),
-    updateFlowsDatatableRow: vi.fn(async (id, key, row) => {
+    putFlowsDatatableRow: vi.fn(async (id, key, opts) => {
+      const row = opts.body;
       const idx = rows.findIndex((r) => r.key === key);
       if (idx >= 0) rows[idx] = { ...rows[idx], ...row };
       return rows[idx];
@@ -28,7 +29,7 @@ function makePlatformClient(overrides = {}) {
   };
 
   const client = {
-    DataTablesApi: vi.fn(() => dataTablesApi),
+    ArchitectApi: vi.fn(() => dataTablesApi),
     _dataTablesApi: dataTablesApi,
     _rows: rows,
     _getTableId: () => tableId,
@@ -75,7 +76,7 @@ describe('historyStore', () => {
       executionTime: 420,
       status: 'applied',
     });
-    expect(pc._dataTablesApi.createFlowsDatatableRow).toHaveBeenCalledOnce();
+    expect(pc._dataTablesApi.postFlowsDatatableRows).toHaveBeenCalledOnce();
   });
 
   it('record() updates an existing row instead of inserting a duplicate', async () => {
@@ -93,13 +94,13 @@ describe('historyStore', () => {
     };
     // First call: inserts
     await store.record(pc, entry);
-    expect(pc._dataTablesApi.createFlowsDatatableRow).toHaveBeenCalledOnce();
-    expect(pc._dataTablesApi.updateFlowsDatatableRow).not.toHaveBeenCalled();
+    expect(pc._dataTablesApi.postFlowsDatatableRows).toHaveBeenCalledOnce();
+    expect(pc._dataTablesApi.putFlowsDatatableRow).not.toHaveBeenCalled();
 
     // Second call with same key: updates instead of inserting
     await store.record(pc, { ...entry, status: 'applied' });
-    expect(pc._dataTablesApi.createFlowsDatatableRow).toHaveBeenCalledOnce(); // still just once
-    expect(pc._dataTablesApi.updateFlowsDatatableRow).toHaveBeenCalledOnce();
+    expect(pc._dataTablesApi.postFlowsDatatableRows).toHaveBeenCalledOnce(); // still just once
+    expect(pc._dataTablesApi.putFlowsDatatableRow).toHaveBeenCalledOnce();
   });
 
   it('getAppliedVersions returns a Set of applied version strings', async () => {
@@ -157,6 +158,6 @@ describe('historyStore', () => {
     await store.record(pc, { key: 'V001', description: 'd', filename: 'f', checksum: 'c',
       appliedAt: 'a', appliedBy: 'b', executionTime: 1, status: 'failed' });
     await store.updateStatus(pc, 'V001', 'pending');
-    expect(pc._dataTablesApi.updateFlowsDatatableRow).toHaveBeenCalled();
+    expect(pc._dataTablesApi.putFlowsDatatableRow).toHaveBeenCalled();
   });
 });
