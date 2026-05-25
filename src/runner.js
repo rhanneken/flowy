@@ -129,6 +129,7 @@ async function runOne(migration, architectSession, platformClient, options) {
       architectSession,
       migration.module.flows,
       `pre-migration-${migration.version}`,
+      platformClient,
     );
   }
 

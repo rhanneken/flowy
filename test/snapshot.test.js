@@ -1,44 +1,56 @@
 import { describe, it, expect, vi } from 'vitest';
 
-function makeSession(flowsByName = {}) {
-  const flows = {};
-  for (const [name, flow] of Object.entries(flowsByName)) {
-    flows[name] = flow;
-  }
+function makeScripting(flowsByName = {}) {
   return {
-    flows: {
-      getFlowByName: vi.fn(async (name) => {
-        if (!flows[name]) throw new Error(`Flow "${name}" not found`);
-        return flows[name];
-      }),
+    factories: {
+      archFactoryFlows: {
+        checkoutAndLoadFlowByFlowNameAsync: vi.fn(async (name) => {
+          if (!flowsByName[name]) throw new Error(`Flow "${name}" not found`);
+          return flowsByName[name];
+        }),
+      },
     },
   };
 }
 
+function makePlatformClient(flowsByName = {}) {
+  return {
+    FlowsApi: vi.fn(() => ({
+      getFlows: vi.fn(async ({ name }) => ({
+        entities: flowsByName[name] ? [{ name, type: 'inboundCall' }] : [],
+      })),
+    })),
+  };
+}
+
 describe('snapshotFlows', () => {
-  it('calls checkIn on each declared flow', async () => {
+  it('checks out and checks in each declared flow', async () => {
     const { snapshotFlows } = await import('../src/snapshot.js');
-    const flow = { checkIn: vi.fn(async () => {}) };
-    const session = makeSession({ MainInbound: flow });
-    await snapshotFlows(session, ['MainInbound'], 'pre-migration-V001');
-    expect(session.flows.getFlowByName).toHaveBeenCalledWith('MainInbound');
-    expect(flow.checkIn).toHaveBeenCalledWith('pre-migration-V001');
+    const flow = { checkInAsync: vi.fn(async () => {}) };
+    const scripting = makeScripting({ MainInbound: flow });
+    const platformClient = makePlatformClient({ MainInbound: true });
+    await snapshotFlows(scripting, ['MainInbound'], 'pre-migration-V001', platformClient);
+    expect(scripting.factories.archFactoryFlows.checkoutAndLoadFlowByFlowNameAsync)
+      .toHaveBeenCalledWith('MainInbound', 'inboundCall');
+    expect(flow.checkInAsync).toHaveBeenCalledWith('pre-migration-V001');
   });
 
   it('does nothing when flows array is empty or absent', async () => {
     const { snapshotFlows } = await import('../src/snapshot.js');
-    const session = makeSession({});
-    await snapshotFlows(session, [], 'label');
-    await snapshotFlows(session, null, 'label');
-    await snapshotFlows(session, undefined, 'label');
-    expect(session.flows.getFlowByName).not.toHaveBeenCalled();
+    const scripting = makeScripting({});
+    const platformClient = makePlatformClient({});
+    await snapshotFlows(scripting, [], 'label', platformClient);
+    await snapshotFlows(scripting, null, 'label', platformClient);
+    await snapshotFlows(scripting, undefined, 'label', platformClient);
+    expect(scripting.factories.archFactoryFlows.checkoutAndLoadFlowByFlowNameAsync)
+      .not.toHaveBeenCalled();
   });
 
-  it('throws when checkIn fails (e.g. flow is locked)', async () => {
+  it('throws a clear error when the flow does not exist', async () => {
     const { snapshotFlows } = await import('../src/snapshot.js');
-    const flow = { checkIn: vi.fn(async () => { throw new Error('Flow is checked out'); }) };
-    const session = makeSession({ LockedFlow: flow });
-    await expect(snapshotFlows(session, ['LockedFlow'], 'label'))
-      .rejects.toThrow('Flow is checked out');
+    const scripting = makeScripting({});
+    const platformClient = makePlatformClient({});
+    await expect(snapshotFlows(scripting, ['NoSuchFlow'], 'label', platformClient))
+      .rejects.toThrow('Flow "NoSuchFlow" not found');
   });
 });

@@ -4,16 +4,38 @@
  * Check in each flow listed in the flows array before a migration runs.
  * This creates a recoverable snapshot in GC version history.
  *
- * @param {object} architectSession  Raw Architect Scripting SDK session
+ * Uses the Platform Client API to discover each flow's type (required by
+ * the Architect Scripting SDK), then checks the flow out and checks it in.
+ *
+ * @param {object} scripting        The purecloud-flow-scripting-api-sdk-javascript module
  * @param {string[]|null|undefined} flows  Flow names to snapshot
- * @param {string} label  Check-in comment (e.g. 'pre-migration-V001')
+ * @param {string} label            Check-in comment (e.g. 'pre-migration-V001')
+ * @param {object} platformClient   Authenticated purecloud-platform-client-v2 module
  */
-async function snapshotFlows(architectSession, flows, label) {
+async function snapshotFlows(scripting, flows, label, platformClient) {
   if (!flows || flows.length === 0) return;
 
+  const flowsApi = new platformClient.FlowsApi();
+  const archFactoryFlows = scripting.factories.archFactoryFlows;
+
   for (const flowName of flows) {
-    const flow = await architectSession.flows.getFlowByName(flowName);
-    await flow.checkIn(label);
+    // Discover the flow type via the Platform API (required by the Architect
+    // Scripting SDK — it cannot load a flow by name without knowing its type).
+    const results = await flowsApi.getFlows({ name: flowName });
+    const flowInfo = (results.entities || []).find((f) => f.name === flowName);
+    if (!flowInfo) {
+      throw new Error(
+        `Flow "${flowName}" not found. Cannot create pre-migration snapshot. ` +
+        'Remove it from the flows array or ensure it exists before running this migration.',
+      );
+    }
+
+    // Check out the flow and load it, then check it in to create the snapshot.
+    const flow = await archFactoryFlows.checkoutAndLoadFlowByFlowNameAsync(
+      flowName,
+      flowInfo.type,
+    );
+    await flow.checkInAsync(label);
   }
 }
 
