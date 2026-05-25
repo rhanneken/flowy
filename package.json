@@ -1,6 +1,6 @@
 {
   "name": "@rhanneken/flowy",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Genesys Cloud flow migration tool",
   "license": "0BSD",
   "repository": {
@@ -11,14 +11,18 @@
     "url": "https://github.com/rhanneken/flowy/issues"
   },
   "homepage": "https://github.com/rhanneken/flowy#readme",
-  "bin": { "flowy": "bin/flowy.js" },
+  "bin": {
+    "flowy": "bin/flowy.js"
+  },
   "types": "types/FlowMigration.d.ts",
   "files": [
     "bin/",
     "src/",
     "types/"
   ],
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest"
@@ -34,7 +38,9 @@
     "vitest": "^2.0.0"
   },
   "peerDependenciesMeta": {
-    "tsx": { "optional": true }
+    "tsx": {
+      "optional": true
+    }
   },
   "peerDependencies": {
     "tsx": ">=4.0.0"
