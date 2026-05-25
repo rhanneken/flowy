@@ -116,7 +116,7 @@ module.exports = {
 
   async up(scripting, platformClient) {
     const flows = scripting.factories.archFactoryFlows;
-    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MainInbound', 'inboundCall');
+    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MainInbound', 'inboundcall');
     // ... make changes to flow ...
     await flow.checkInAsync('V001: add greeting prompt');
     await flow.publishAsync();
@@ -124,7 +124,7 @@ module.exports = {
 
   async down(scripting, platformClient) {
     const flows = scripting.factories.archFactoryFlows;
-    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MainInbound', 'inboundCall');
+    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MainInbound', 'inboundcall');
     // ... undo changes ...
     await flow.checkInAsync('V001 rolled back');
   },
@@ -141,7 +141,7 @@ export default {
 
   async up(scripting: any, platformClient: any): Promise<void> {
     const flows = scripting.factories.archFactoryFlows;
-    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('SupportInbound', 'inboundCall');
+    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('SupportInbound', 'inboundcall');
     // ... make changes to flow ...
     await flow.checkInAsync('V002: add callback menu');
     await flow.publishAsync();
@@ -149,7 +149,7 @@ export default {
 
   async down(scripting: any, platformClient: any): Promise<void> {
     const flows = scripting.factories.archFactoryFlows;
-    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('SupportInbound', 'inboundCall');
+    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('SupportInbound', 'inboundcall');
     // ... undo changes ...
     await flow.checkInAsync('V002 rolled back');
   },

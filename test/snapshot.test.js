@@ -17,7 +17,8 @@ function makePlatformClient(flowsByName = {}) {
   return {
     ArchitectApi: vi.fn(() => ({
       getFlows: vi.fn(async ({ name }) => ({
-        entities: flowsByName[name] ? [{ name, type: 'inboundCall' }] : [],
+        // The real Platform API returns flow types in uppercase
+        entities: flowsByName[name] ? [{ name, type: 'INBOUNDCALL' }] : [],
       })),
     })),
   };
@@ -31,7 +32,7 @@ describe('snapshotFlows', () => {
     const platformClient = makePlatformClient({ MainInbound: true });
     await snapshotFlows(scripting, ['MainInbound'], 'pre-migration-V001', platformClient);
     expect(scripting.factories.archFactoryFlows.checkoutAndLoadFlowByFlowNameAsync)
-      .toHaveBeenCalledWith('MainInbound', 'inboundCall');
+      .toHaveBeenCalledWith('MainInbound', 'inboundcall');
     expect(flow.checkInAsync).toHaveBeenCalledWith('pre-migration-V001');
   });
 

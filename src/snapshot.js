@@ -31,9 +31,11 @@ async function snapshotFlows(scripting, flows, label, platformClient) {
     }
 
     // Check out the flow and load it, then check it in to create the snapshot.
+    // The Platform API returns flow types in uppercase (e.g. 'INBOUNDCALL'),
+    // but the Architect Scripting SDK requires lowercase ('inboundcall').
     const flow = await archFactoryFlows.checkoutAndLoadFlowByFlowNameAsync(
       flowName,
-      flowInfo.type,
+      flowInfo.type.toLowerCase(),
     );
     await flow.checkInAsync(label);
   }

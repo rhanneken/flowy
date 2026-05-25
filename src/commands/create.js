@@ -14,7 +14,7 @@ module.exports = {
 
   async up(scripting, platformClient) {
     // const flows = scripting.factories.archFactoryFlows;
-    // const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MyFlow', 'inboundCall');
+    // const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MyFlow', 'inboundcall');
     // ... make changes ...
     // await flow.checkInAsync('${version}: ${description}');
     // await flow.publishAsync();
@@ -34,7 +34,7 @@ const TS_TEMPLATE = (version, description) => `export default {
 
   async up(scripting: any, platformClient: any): Promise<void> {
     // const flows = scripting.factories.archFactoryFlows;
-    // const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MyFlow', 'inboundCall');
+    // const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MyFlow', 'inboundcall');
     // ... make changes ...
     // await flow.checkInAsync('${version}: ${description}');
     // await flow.publishAsync();
