@@ -106,7 +106,11 @@ async function record(platformClient, entry) {
 async function updateStatus(platformClient, version, status, extra = {}) {
   const tableId = await ensureTable(platformClient);
   const api = new platformClient.ArchitectApi();
-  await api.putFlowsDatatableRow(tableId, version, { body: { status, ...extra } });
+  // The GC PUT API replaces the entire row, so we must merge the existing
+  // data rather than sending only the fields we want to change.
+  const existingRow = await getRow(platformClient, version);
+  const updatedRow = { ...(existingRow || {}), key: version, status, ...extra };
+  await api.putFlowsDatatableRow(tableId, version, { body: updatedRow });
 }
 
 /**

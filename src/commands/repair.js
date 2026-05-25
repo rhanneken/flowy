@@ -35,8 +35,22 @@ module.exports = async function repair(options) {
     process.exit(err.exitCode ?? exitCodes.HISTORY_STORE_ERROR);
   }
 
-  const rows = await getAllRows(platformClient);
-  const migrations = loadMigrations(config.migrationsDir);
+  let rows;
+  try {
+    rows = await getAllRows(platformClient);
+  } catch (err) {
+    console.error(`Failed to read migration history: ${err.message || JSON.stringify(err)}`);
+    process.exit(exitCodes.HISTORY_STORE_ERROR);
+  }
+
+  let migrations;
+  try {
+    migrations = loadMigrations(config.migrationsDir);
+  } catch (err) {
+    console.error(err.message);
+    process.exit(err.exitCode ?? exitCodes.CONFIG_ERROR);
+  }
+
   const rowsByVersion = Object.fromEntries(rows.map((r) => [r.key, r]));
 
   let repaired = 0;
@@ -51,9 +65,13 @@ module.exports = async function repair(options) {
         `${m.version} is failed. Reset to pending so it will be retried? [y/N] `,
       );
       if (answer === 'y') {
-        await updateStatus(platformClient, m.version, 'pending');
-        console.log(`  Reset ${m.version} to pending.`);
-        repaired++;
+        try {
+          await updateStatus(platformClient, m.version, 'pending');
+          console.log(`  Reset ${m.version} to pending.`);
+          repaired++;
+        } catch (err) {
+          console.error(`  Failed to reset ${m.version}: ${err.message || JSON.stringify(err)}`);
+        }
       }
       continue;
     }
@@ -64,9 +82,13 @@ module.exports = async function repair(options) {
         `${m.version} has been modified after being applied. Update stored checksum? [y/N] `,
       );
       if (answer === 'y') {
-        await updateStatus(platformClient, m.version, 'applied', { checksum: currentChecksum });
-        console.log(`  Updated checksum for ${m.version}.`);
-        repaired++;
+        try {
+          await updateStatus(platformClient, m.version, 'applied', { checksum: currentChecksum });
+          console.log(`  Updated checksum for ${m.version}.`);
+          repaired++;
+        } catch (err) {
+          console.error(`  Failed to update checksum for ${m.version}: ${err.message || JSON.stringify(err)}`);
+        }
       }
       continue;
     }
@@ -77,18 +99,22 @@ module.exports = async function repair(options) {
         `${m.version} has no history record. Was it already applied successfully? [y/N] `,
       );
       if (answer === 'y') {
-        await record(platformClient, {
-          key: m.version,
-          description: m.module.description,
-          filename: m.filename,
-          checksum: currentChecksum,
-          appliedAt: new Date().toISOString(),
-          appliedBy: getAppliedBy(),
-          executionTime: 0,
-          status: 'applied',
-        });
-        console.log(`  Created missing history entry for ${m.version}.`);
-        repaired++;
+        try {
+          await record(platformClient, {
+            key: m.version,
+            description: m.module.description,
+            filename: m.filename,
+            checksum: currentChecksum,
+            appliedAt: new Date().toISOString(),
+            appliedBy: getAppliedBy(),
+            executionTime: 0,
+            status: 'applied',
+          });
+          console.log(`  Created missing history entry for ${m.version}.`);
+          repaired++;
+        } catch (err) {
+          console.error(`  Failed to create entry for ${m.version}: ${err.message || JSON.stringify(err)}`);
+        }
       }
     }
   }
