@@ -137,7 +137,6 @@ async function runOne(migration, architectSession, platformClient, options) {
     await snapshotFlows(
       architectSession,
       migration.module.flows,
-      `pre-migration-${migration.version}`,
       platformClient,
     );
   }

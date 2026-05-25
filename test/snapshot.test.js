@@ -30,19 +30,19 @@ describe('snapshotFlows', () => {
     const flow = { checkInAsync: vi.fn(async () => {}) };
     const scripting = makeScripting({ MainInbound: flow });
     const platformClient = makePlatformClient({ MainInbound: true });
-    await snapshotFlows(scripting, ['MainInbound'], 'pre-migration-V001', platformClient);
+    await snapshotFlows(scripting, ['MainInbound'], platformClient);
     expect(scripting.factories.archFactoryFlows.checkoutAndLoadFlowByFlowNameAsync)
       .toHaveBeenCalledWith('MainInbound', 'inboundcall');
-    expect(flow.checkInAsync).toHaveBeenCalledWith('pre-migration-V001');
+    expect(flow.checkInAsync).toHaveBeenCalledWith();
   });
 
   it('does nothing when flows array is empty or absent', async () => {
     const { snapshotFlows } = await import('../src/snapshot.js');
     const scripting = makeScripting({});
     const platformClient = makePlatformClient({});
-    await snapshotFlows(scripting, [], 'label', platformClient);
-    await snapshotFlows(scripting, null, 'label', platformClient);
-    await snapshotFlows(scripting, undefined, 'label', platformClient);
+    await snapshotFlows(scripting, [], platformClient);
+    await snapshotFlows(scripting, null, platformClient);
+    await snapshotFlows(scripting, undefined, platformClient);
     expect(scripting.factories.archFactoryFlows.checkoutAndLoadFlowByFlowNameAsync)
       .not.toHaveBeenCalled();
   });
@@ -51,7 +51,7 @@ describe('snapshotFlows', () => {
     const { snapshotFlows } = await import('../src/snapshot.js');
     const scripting = makeScripting({});
     const platformClient = makePlatformClient({});
-    await expect(snapshotFlows(scripting, ['NoSuchFlow'], 'label', platformClient))
+    await expect(snapshotFlows(scripting, ['NoSuchFlow'], platformClient))
       .rejects.toThrow('Flow "NoSuchFlow" not found');
   });
 });

@@ -9,10 +9,9 @@
  *
  * @param {object} scripting        The purecloud-flow-scripting-api-sdk-javascript module
  * @param {string[]|null|undefined} flows  Flow names to snapshot
- * @param {string} label            Check-in comment (e.g. 'pre-migration-V001')
  * @param {object} platformClient   Authenticated purecloud-platform-client-v2 module
  */
-async function snapshotFlows(scripting, flows, label, platformClient) {
+async function snapshotFlows(scripting, flows, platformClient) {
   if (!flows || flows.length === 0) return;
 
   const flowsApi = new platformClient.ArchitectApi();
@@ -33,11 +32,13 @@ async function snapshotFlows(scripting, flows, label, platformClient) {
     // Check out the flow and load it, then check it in to create the snapshot.
     // The Platform API returns flow types in uppercase (e.g. 'INBOUNDCALL'),
     // but the Architect Scripting SDK requires lowercase ('inboundcall').
+    // checkInAsync() takes an optional boolean (ensureSearchable) — there is
+    // no label/comment parameter in the SDK.
     const flow = await archFactoryFlows.checkoutAndLoadFlowByFlowNameAsync(
       flowName,
       flowInfo.type.toLowerCase(),
     );
-    await flow.checkInAsync(label);
+    await flow.checkInAsync();
   }
 }
 

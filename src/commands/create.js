@@ -16,7 +16,7 @@ module.exports = {
     // const flows = scripting.factories.archFactoryFlows;
     // const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MyFlow', 'inboundcall');
     // ... make changes ...
-    // await flow.checkInAsync('${version}: ${description}');
+    // await flow.checkInAsync();
     // await flow.publishAsync();
   },
 
@@ -36,7 +36,7 @@ const TS_TEMPLATE = (version, description) => `export default {
     // const flows = scripting.factories.archFactoryFlows;
     // const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MyFlow', 'inboundcall');
     // ... make changes ...
-    // await flow.checkInAsync('${version}: ${description}');
+    // await flow.checkInAsync();
     // await flow.publishAsync();
   },
 

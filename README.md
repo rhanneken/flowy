@@ -118,7 +118,7 @@ module.exports = {
     const flows = scripting.factories.archFactoryFlows;
     const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MainInbound', 'inboundcall');
     // ... make changes to flow ...
-    await flow.checkInAsync('V001: add greeting prompt');
+    await flow.checkInAsync();
     await flow.publishAsync();
   },
 
@@ -126,7 +126,7 @@ module.exports = {
     const flows = scripting.factories.archFactoryFlows;
     const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MainInbound', 'inboundcall');
     // ... undo changes ...
-    await flow.checkInAsync('V001 rolled back');
+    await flow.checkInAsync();
   },
 };
 ```
@@ -143,7 +143,7 @@ export default {
     const flows = scripting.factories.archFactoryFlows;
     const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('SupportInbound', 'inboundcall');
     // ... make changes to flow ...
-    await flow.checkInAsync('V002: add callback menu');
+    await flow.checkInAsync();
     await flow.publishAsync();
   },
 
@@ -151,7 +151,7 @@ export default {
     const flows = scripting.factories.archFactoryFlows;
     const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('SupportInbound', 'inboundcall');
     // ... undo changes ...
-    await flow.checkInAsync('V002 rolled back');
+    await flow.checkInAsync();
   },
 };
 ```
