@@ -78,9 +78,9 @@ module.exports = async function rollback(options) {
   try {
     await archSession.startWithClientIdAndSecret(
       orgLocation,
-      async (architectSession) => {
+      async () => {
         try {
-          await migration.module.down(architectSession, platformClient);
+          await migration.module.down(archSession, platformClient);
         } catch (err) {
           rollbackError = err;
         }

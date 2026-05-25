@@ -94,10 +94,10 @@ async function runMigrations(
 
   await archSession.startWithClientIdAndSecret(
     orgLocation,
-    async (architectSession) => {
+    async () => {
       try {
         for (const migration of pending) {
-          await runOne(migration, architectSession, platformClient, options);
+          await runOne(migration, archSession, platformClient, options);
         }
       } catch (err) {
         callbackError = err;
