@@ -7,7 +7,7 @@ const program = new Command();
 program
   .name('flowy')
   .description('Genesys Cloud flow migration tool')
-  .version('0.1.0');
+  .version(require('../package.json').version);
 
 program
   .command('init')
