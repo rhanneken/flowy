@@ -179,6 +179,7 @@ Projects using only `.js` migrations have no TypeScript dependency.
 | `flowy validate` | Check for missing version numbers or structural errors (local only) |
 | `flowy repair` | Fix history table problems interactively |
 | `flowy baseline` | Mark all existing migrations as applied without running them |
+| `flowy unlock <flow-name>` | Force-unlock a flow left locked by a failed migration |
 
 All commands that communicate with Genesys Cloud accept `--env <name>` to override `defaultEnvironment`.
 
@@ -210,9 +211,28 @@ If `up()` throws, flowy records the migration as `failed` in history, logs the e
 
 If `up()` succeeds but writing to the history table fails, flowy logs a prominent warning and tells you to run `flowy repair`.
 
+### Locked flows
+
+The Architect Scripting SDK acquires an exclusive lock on a flow when you check it out. The lock is released when `publishAsync()` or `checkInAsync()` completes. If a migration fails between checkout and the final publish/check-in, the lock is left dangling — no subsequent session can check out that flow until the lock is cleared.
+
+To release a stranded lock:
+
+```sh
+flowy unlock "My Flow Name"
+```
+
+Then reset the failed migration and retry:
+
+```sh
+flowy repair   # reset the failed migration to pending
+flowy migrate
+```
+
+> **Note:** `flowy unlock` calls the Genesys Cloud force-unlock API, which requires **Architect Admin** permissions on the OAuth client.
+
 ### `flowy repair`
 
-The single escape hatch for history table problems:
+The escape hatch for history table problems:
 
 1. **Reset a failed entry** — resets a `failed` migration to `pending` so the next `flowy migrate` retries it
 2. **Update a checksum** — clears a checksum mismatch warning after a migration file was legitimately edited post-apply

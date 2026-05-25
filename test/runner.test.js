@@ -167,6 +167,60 @@ describe('runMigrations', () => {
     warnSpy.mockRestore();
   });
 
+  it('prints a lock hint when up() fails with a "locked by" error', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { filePath: fp1 } = createTempMigration(
+      'V001__lock_hint.js',
+      "module.exports = { description: 'a', up: async () => {} };",
+    );
+
+    const lockErr = new Error("Request Error (409): Flow 'MyFlow' is locked by user 'someone@example.com'.");
+    const migrations = [
+      { version: 'V001', filename: 'V001__a.js', filePath: fp1,
+        module: { description: 'a', up: vi.fn(async () => { throw lockErr; }) } },
+    ];
+
+    const { runMigrations } = await import('../src/runner.js');
+    await expect(
+      runMigrations(
+        { clientId: 'id', clientSecret: 'sec', region: 'mypurecloud.com' },
+        migrations, new Set(), new Map(), {},
+        makePlatformClient(),
+        makeArchScripting(),
+      )
+    ).rejects.toThrow(/locked by/);
+
+    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('flowy unlock'));
+    errSpy.mockRestore();
+  });
+
+  it('does not print a lock hint for "not locked by" errors', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { filePath: fp1 } = createTempMigration(
+      'V001__not_lock_hint.js',
+      "module.exports = { description: 'a', up: async () => {} };",
+    );
+
+    const notLockedErr = new Error("Request Error (409): Flow 'MyFlow' is not locked by client 'Archy Client'.");
+    const migrations = [
+      { version: 'V001', filename: 'V001__a.js', filePath: fp1,
+        module: { description: 'a', up: vi.fn(async () => { throw notLockedErr; }) } },
+    ];
+
+    const { runMigrations } = await import('../src/runner.js');
+    await expect(
+      runMigrations(
+        { clientId: 'id', clientSecret: 'sec', region: 'mypurecloud.com' },
+        migrations, new Set(), new Map(), {},
+        makePlatformClient(),
+        makeArchScripting(),
+      )
+    ).rejects.toThrow(/not locked by/);
+
+    expect(errSpy).not.toHaveBeenCalledWith(expect.stringContaining('flowy unlock'));
+    errSpy.mockRestore();
+  });
+
   it('throws on checksum mismatch with --strict', async () => {
     const content = "module.exports = { description: 'a', up: async () => {} };";
     const { filePath: fp1 } = createTempMigration('V001__a_strict.js', content);

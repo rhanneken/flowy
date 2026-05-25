@@ -57,4 +57,10 @@ program
   .option('--env <name>', 'target environment')
   .action(require('../src/commands/baseline'));
 
+program
+  .command('unlock <flow-name>')
+  .description('Force-unlock a flow left locked by a failed migration (requires Architect Admin)')
+  .option('--env <name>', 'target environment')
+  .action(require('../src/commands/unlock'));
+
 program.parse();

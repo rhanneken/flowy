@@ -162,6 +162,8 @@ async function runOne(migration, architectSession, platformClient, options) {
     console.log(`  ✓ ${migration.version} applied in ${executionTime}ms`);
   } catch (err) {
     const executionTime = Date.now() - startTime;
+    // SDK may throw strings or plain objects instead of Error instances.
+    const errStr = err.message || String(err);
 
     try {
       await record(platformClient, {
@@ -173,7 +175,7 @@ async function runOne(migration, architectSession, platformClient, options) {
         appliedBy: getAppliedBy(),
         executionTime,
         status: 'failed',
-        error: err.message || String(err),
+        error: errStr,
       });
     } catch (historyErr) {
       console.error(
@@ -182,8 +184,16 @@ async function runOne(migration, architectSession, platformClient, options) {
         'Run `flowy repair` after resolving the Data Table issue.',
       );
     }
-
-    console.error(`  ✗ ${migration.version} failed: ${err.message || String(err)}`);
+    console.error(`  ✗ ${migration.version} failed: ${errStr}`);
+    // If the flow is locked by another user or a previous session, give an actionable hint.
+    // "not locked by" (our own programming error) is intentionally excluded.
+    if (/locked by/i.test(errStr) && !/not locked by/i.test(errStr)) {
+      console.error(
+        '  Hint: a flow is locked by another user or a previous session.\n' +
+        '  Run `flowy unlock "<flow-name>"` to release the lock,\n' +
+        '  then `flowy repair` and `flowy migrate` to retry.',
+      );
+    }
     throw err;
   }
 }
