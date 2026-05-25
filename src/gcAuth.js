@@ -8,7 +8,7 @@
  */
 async function authenticatePlatformClient(env) {
   const platformClient = require('purecloud-platform-client-v2');
-  platformClient.ApiClient.instance.setBasePath(`https://api.${env.region}`);
+  platformClient.ApiClient.instance.setEnvironment(env.region);
   await platformClient.ApiClient.instance.loginClientCredentialsGrant(
     env.clientId,
     env.clientSecret,
