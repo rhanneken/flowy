@@ -2,6 +2,8 @@
 // TypeScript interface for flowy migration files.
 // Import in your migration: import type { FlowMigration } from '@rhanneken/flowy/types/FlowMigration';
 
+import type { ArchitectScripting } from 'purecloud-flow-scripting-api-sdk-javascript';
+
 export interface FlowMigration {
   /** Human-readable description stored in migration history. */
   description: string;
@@ -25,8 +27,11 @@ export interface FlowMigration {
    *                         authenticated and ready to use. Load flows via
    *                         scripting.factories.archFactoryFlows.
    * @param platformClient   The authenticated purecloud-platform-client-v2 module.
+   *                         Typed as `any` because the SDK's TypeScript module declaration
+   *                         does not export the API classes (e.g. ArchitectApi); only
+   *                         ApiClient and PureCloudRegionHosts are in the module type.
    */
-  up(scripting: any, platformClient: any): Promise<void>;
+  up(scripting: ArchitectScripting, platformClient: any): Promise<void>;
 
   /**
    * Optional. Roll back the migration. Required for `flowy rollback` to work.
@@ -35,5 +40,5 @@ export interface FlowMigration {
    *                         authenticated and ready to use.
    * @param platformClient   The authenticated purecloud-platform-client-v2 module.
    */
-  down?(scripting: any, platformClient: any): Promise<void>;
+  down?(scripting: ArchitectScripting, platformClient: any): Promise<void>;
 }
