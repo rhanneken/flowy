@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "Genesys Cloud flow migration tool",
   "license": "0BSD",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rhanneken/flowy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rhanneken/flowy/issues"
+  },
+  "homepage": "https://github.com/rhanneken/flowy#readme",
   "bin": { "flowy": "bin/flowy.js" },
   "types": "types/FlowMigration.d.ts",
   "files": [
