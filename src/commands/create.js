@@ -9,20 +9,14 @@ const { loadConfig } = require('../config');
  * @param {Date} d
  * @returns {string}
  */
-/**
- * Format a Date as a 14-character YYYYMMDDHHMMSS string (UTC) for use as a migration version.
- * UTC is used so that timestamps are globally consistent regardless of each developer's local timezone.
- * @param {Date} d
- * @returns {string}
- */
 function formatTimestamp(d) {
   return [
-    d.getUTCFullYear(),
-    String(d.getUTCMonth() + 1).padStart(2, '0'),
-    String(d.getUTCDate()).padStart(2, '0'),
-    String(d.getUTCHours()).padStart(2, '0'),
-    String(d.getUTCMinutes()).padStart(2, '0'),
-    String(d.getUTCSeconds()).padStart(2, '0'),
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+    String(d.getHours()).padStart(2, '0'),
+    String(d.getMinutes()).padStart(2, '0'),
+    String(d.getSeconds()).padStart(2, '0'),
   ].join('');
 }
 
