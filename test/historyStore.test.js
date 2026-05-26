@@ -115,13 +115,13 @@ describe('historyStore', () => {
     expect(versions.has('V002')).toBe(false); // failed is not applied
   });
 
-  it('getAppliedVersions includes rolled_back versions', async () => {
+  it('getAppliedVersions excludes rolled_back versions so they can be re-applied', async () => {
     const pc = makePlatformClient();
     await store.ensureTable(pc);
     await store.record(pc, { key: 'V001', description: 'd', filename: 'f', checksum: 'c',
       appliedAt: 'a', appliedBy: 'b', executionTime: 1, status: 'rolled_back' });
     const versions = await store.getAppliedVersions(pc);
-    expect(versions.has('V001')).toBe(true);
+    expect(versions.has('V001')).toBe(false); // rolled_back is treated as pending so it can be re-applied
   });
 
   it('getStoredChecksums returns a Map of version -> checksum for applied migrations', async () => {

@@ -142,7 +142,7 @@ async function getAllRows(platformClient) {
 async function getAppliedVersions(platformClient) {
   const rows = await getAllRows(platformClient);
   return new Set(
-    rows.filter((r) => r.status === 'applied' || r.status === 'rolled_back').map((r) => r.key)
+    rows.filter((r) => r.status === 'applied').map((r) => r.key)
   );
 }
 
