@@ -89,7 +89,7 @@ Each file exports:
 | `down(scripting, platformClient)` | | Rolls back the migration (required for `flowy rollback`) |
 | `flows` | | Array of flow names to check in before `up()` runs, creating a recoverable snapshot |
 
-You are responsible for calling `checkIn()` and `publish()` inside `up()`. Flowy does not call them on your behalf.
+You are responsible for calling `checkInAsync()` or `publishAsync()` inside `up()`. Flowy does not call them on your behalf.
 
 ### The `scripting` argument
 
@@ -196,7 +196,7 @@ All commands that communicate with Genesys Cloud accept `--env <name>` to overri
 
 ### Single session
 
-Flowy authenticates once at the start of `flowy migrate` and runs all pending migrations inside a single `ArchScripting.run()` session. The Architect Scripting session and an authenticated Platform API Client are passed into each `up()` call.
+Flowy authenticates once at the start of `flowy migrate` and runs all pending migrations inside a single Architect Scripting session. The session and an authenticated Platform API Client are passed into each `up()` call.
 
 ### History tracking
 
