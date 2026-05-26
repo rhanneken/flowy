@@ -45,7 +45,7 @@ module.exports = async function migrate(options) {
       migrations,
       appliedVersions,
       storedChecksums,
-      { strict: options.strict, target: options.target, date: options.date },
+      { strict: options.strict, target: options.target },
       platformClient,
     );
   } catch (err) {

@@ -5,7 +5,7 @@ const { join } = require('path');
 const { FlowyCLIError } = require('./config');
 const { CONFIG_ERROR } = require('./exitCodes');
 
-const MIGRATION_PATTERN = /^(\d{14})_(.+)\.(js|ts)$/;
+const MIGRATION_PATTERN = /^(V\d+)__(.+)\.(js|ts)$/;
 
 /**
  * Register tsx loader if TypeScript migrations are present and tsx is available.
@@ -62,11 +62,11 @@ function loadMigrations(migrationsDir) {
     );
   }
 
-  // Sort by version (lexicographic order = chronological order for YYYYMMDDHHMMSS timestamps)
+  // Sort by version number
   filenames.sort((a, b) => {
     const [, vA] = a.match(MIGRATION_PATTERN);
     const [, vB] = b.match(MIGRATION_PATTERN);
-    return vA < vB ? -1 : 1;
+    return parseInt(vA.slice(1), 10) - parseInt(vB.slice(1), 10);
   });
 
   return filenames.map((filename) => {

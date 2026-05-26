@@ -29,7 +29,11 @@ module.exports = async function rollback(options) {
   const rows = await getAllRows(platformClient);
   const applied = rows
     .filter((r) => r.status === 'applied')
-    .sort((a, b) => (b.key > a.key ? 1 : -1)); // descending (latest timestamp first)
+    .sort((a, b) => {
+      const nA = parseInt(a.key.slice(1), 10);
+      const nB = parseInt(b.key.slice(1), 10);
+      return nB - nA; // descending
+    });
 
   if (applied.length === 0) {
     console.log('No applied migrations to roll back.');

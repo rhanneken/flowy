@@ -16,7 +16,7 @@ const { resolveOrgLocation } = require('./archSession');
  * @param {object[]} allMigrations  Full sorted list from migrationLoader
  * @param {Set<string>} appliedVersions  Versions already recorded as 'applied'
  * @param {Map<string,string>} storedChecksums  version -> checksum from history
- * @param {object} options          { strict, target, date }
+ * @param {object} options          { strict, target }
  * @param {object} platformClient   Authenticated purecloud-platform-client-v2 module
  * @param {object} [_archScripting] Injected for testing; defaults to require(SDK)
  */
@@ -48,47 +48,17 @@ async function runMigrations(
 
   // 2. Filter pending migrations
   let pending = allMigrations.filter((m) => !appliedVersions.has(m.version));
-
-  if (options.target && options.date) {
-    throw new FlowyCLIError(
-      '--target and --date are mutually exclusive.',
-      MIGRATION_FAILED,
-    );
-  }
-
   if (options.target) {
+    const targetNum = parseInt(options.target.slice(1), 10);
     // Validate target exists in allMigrations
-    const targetExists = allMigrations.some((m) => m.version === options.target);
+    const targetExists = allMigrations.some((m) => parseInt(m.version.slice(1), 10) === targetNum);
     if (!targetExists) {
       throw new FlowyCLIError(
         `Target version "${options.target}" not found in migrations directory.`,
         MIGRATION_FAILED,
       );
     }
-    pending = pending.filter((m) => m.version <= options.target);
-  }
-
-  if (options.date) {
-    // Strip any dashes/separators and pad to 14 digits so the comparison covers the full day.
-    const ceiling = options.date.replace(/\D/g, '').padEnd(14, '9');
-    pending = pending.filter((m) => m.version <= ceiling);
-  }
-
-  // 3. Detect out-of-order migrations
-  if (pending.length > 0 && appliedVersions.size > 0) {
-    const latestApplied = [...appliedVersions].reduce((max, v) => (v > max ? v : max), '');
-    for (const m of pending) {
-      if (m.version < latestApplied) {
-        const msg =
-          `Migration ${m.filename} is out of order (applied migrations exist with later ` +
-          `timestamps). This migration was created before the last applied migration.`;
-        if (options.strict) {
-          throw new FlowyCLIError(msg, MIGRATION_FAILED);
-        } else {
-          console.warn(`WARNING: ${msg}`);
-        }
-      }
-    }
+    pending = pending.filter((m) => parseInt(m.version.slice(1), 10) <= targetNum);
   }
 
   if (pending.length === 0) {
