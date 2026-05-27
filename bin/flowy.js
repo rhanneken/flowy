@@ -55,6 +55,7 @@ program
   .command('baseline')
   .description('Mark all existing migrations as applied without running them')
   .option('--env <name>', 'target environment')
+  .option('--target <version>', 'baseline migrations up to and including this version')
   .action(require('../src/commands/baseline'));
 
 program

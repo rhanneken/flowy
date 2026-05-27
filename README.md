@@ -186,6 +186,7 @@ Projects using only `.js` migrations have no TypeScript dependency.
 | `flowy validate` | Check for missing version numbers or structural errors (local only) |
 | `flowy repair` | Fix history table problems interactively |
 | `flowy baseline` | Mark all existing migrations as applied without running them |
+| `flowy baseline --target V005` | Baseline migrations up to and including V005 |
 | `flowy unlock <flow-name>` | Force-unlock a flow left locked by a failed migration |
 
 All commands that communicate with Genesys Cloud accept `--env <name>` to override `defaultEnvironment`.
