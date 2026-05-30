@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeChecksum } from '../src/checksum.js';
-import { writeFileSync, unlinkSync } from 'fs';
+import { writeFileSync, unlinkSync, mkdtempSync, mkdirSync, rmSync, renameSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
@@ -33,5 +33,69 @@ describe('computeChecksum', () => {
     expect(a).not.toBe(b);
     unlinkSync(file1);
     unlinkSync(file2);
+  });
+});
+
+describe('computeChecksum (directory)', () => {
+  it('returns a 64-character hex string for a directory', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    writeFileSync(join(dir, 'index.js'), 'module.exports = {};');
+    const result = await computeChecksum(dir);
+    expect(result).toMatch(/^[a-f0-9]{64}$/);
+    rmSync(dir, { recursive: true });
+  });
+
+  it('returns the same checksum for identical directory contents', async () => {
+    const dir1 = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    const dir2 = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    writeFileSync(join(dir1, 'index.js'), 'const x = 1;');
+    writeFileSync(join(dir2, 'index.js'), 'const x = 1;');
+    const [a, b] = await Promise.all([computeChecksum(dir1), computeChecksum(dir2)]);
+    expect(a).toBe(b);
+    rmSync(dir1, { recursive: true });
+    rmSync(dir2, { recursive: true });
+  });
+
+  it('returns a different checksum when a file content changes', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    writeFileSync(join(dir, 'index.js'), 'const x = 1;');
+    const before = await computeChecksum(dir);
+    writeFileSync(join(dir, 'index.js'), 'const x = 2;');
+    const after = await computeChecksum(dir);
+    expect(before).not.toBe(after);
+    rmSync(dir, { recursive: true });
+  });
+
+  it('returns a different checksum when a file is added', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    writeFileSync(join(dir, 'index.js'), 'const x = 1;');
+    const before = await computeChecksum(dir);
+    writeFileSync(join(dir, 'audio.wav'), 'fake-audio-data');
+    const after = await computeChecksum(dir);
+    expect(before).not.toBe(after);
+    rmSync(dir, { recursive: true });
+  });
+
+  it('returns a different checksum when a file is renamed', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    writeFileSync(join(dir, 'helper.js'), 'const x = 1;');
+    writeFileSync(join(dir, 'index.js'), 'module.exports = {};');
+    const before = await computeChecksum(dir);
+    renameSync(join(dir, 'helper.js'), join(dir, 'renamed.js'));
+    const after = await computeChecksum(dir);
+    expect(before).not.toBe(after);
+    rmSync(dir, { recursive: true });
+  });
+
+  it('handles subdirectories recursively', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    mkdirSync(join(dir, 'helpers'));
+    writeFileSync(join(dir, 'index.js'), 'module.exports = {};');
+    writeFileSync(join(dir, 'helpers', 'util.js'), 'const x = 1;');
+    const before = await computeChecksum(dir);
+    writeFileSync(join(dir, 'helpers', 'util.js'), 'const x = 2;');
+    const after = await computeChecksum(dir);
+    expect(before).not.toBe(after);
+    rmSync(dir, { recursive: true });
   });
 });

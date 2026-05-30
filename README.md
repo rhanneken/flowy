@@ -78,9 +78,14 @@ Flowy loads `.env` automatically via [dotenv](https://github.com/motdotla/dotenv
 
 ## Migration files
 
-Migration files are named `V<NNN>__<description>.js` (or `.ts`) using sequential integers. Create them with `flowy create` or by hand.
+A migration can be either a single file or a directory:
 
-Each file exports:
+- **File:** `V<NNN>__<description>.js` (or `.ts`)
+- **Directory:** `V<NNN>__<description>/` containing an `index.js` (or `index.ts`) entry point
+
+Both styles coexist freely in the same `migrations/` folder. Use a directory when a migration involves multiple files — helper modules, audio assets, prompt scripts, etc. Files inside the directory are available via normal relative `require`/`import`. Checksums cover all files in the directory, so modifying any file (including assets) triggers the usual checksum warning.
+
+Each migration (file or `index.js`) exports:
 
 | Export | Required | Description |
 |--------|----------|-------------|
@@ -126,6 +131,33 @@ module.exports = {
     const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MainInbound', 'inboundcall');
     // ... undo changes ...
     await flow.checkInAsync();  // check in only (no publish) — releases the lock
+  },
+};
+```
+
+### Directory migration example
+
+```
+migrations/
+└── V002__add_hold_music/
+    ├── index.js          ← entry point with up() and down()
+    └── hold-music.wav    ← audio asset uploaded inside up()
+```
+
+```js
+// migrations/V002__add_hold_music/index.js
+const { join } = require('path');
+
+module.exports = {
+  description: 'Upload hold music prompt',
+
+  async up(scripting, platformClient) {
+    const audioPath = join(__dirname, 'hold-music.wav');
+    // ... upload audioPath via platformClient ...
+  },
+
+  async down(scripting, platformClient) {
+    // ... delete the uploaded prompt ...
   },
 };
 ```

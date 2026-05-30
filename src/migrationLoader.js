@@ -1,20 +1,21 @@
 'use strict';
 
-const { readdirSync, existsSync } = require('fs');
+const { readdirSync, existsSync, statSync } = require('fs');
 const { join } = require('path');
 const { FlowyCLIError } = require('./config');
 const { CONFIG_ERROR } = require('./exitCodes');
 
-const MIGRATION_PATTERN = /^(V\d+)__(.+)\.(js|ts)$/;
+const FILE_PATTERN = /^(V\d+)__(.+)\.(js|ts)$/;
+const DIR_PATTERN  = /^(V\d+)__(.+)$/;
 
 /**
  * Register tsx loader if TypeScript migrations are present and tsx is available.
  * Searches the user's project node_modules first (devDependencies), then falls
  * back to flowy's own resolution chain (covers globally installed tsx).
- * @param {string[]} filenames
+ * @param {object[]} entries  Parsed migration entries (before loading)
  */
-function maybeRegisterTsx(filenames) {
-  const hasTs = filenames.some((f) => f.endsWith('.ts'));
+function maybeRegisterTsx(entries) {
+  const hasTs = entries.some((e) => e.entryPoint && e.entryPoint.endsWith('.ts'));
   if (!hasTs) return;
   try {
     const searchPaths = [
@@ -33,7 +34,25 @@ function maybeRegisterTsx(filenames) {
 }
 
 /**
- * Load, sort, and validate all migration files from migrationsDir.
+ * Resolve the entry point for a directory migration.
+ * Returns the path to index.js or index.ts, or throws if neither exists.
+ * @param {string} dirPath
+ * @param {string} dirname  e.g. 'V006__create_prompt'
+ * @returns {string}
+ */
+function resolveDirectoryEntryPoint(dirPath, dirname) {
+  for (const name of ['index.js', 'index.ts']) {
+    const candidate = join(dirPath, name);
+    if (existsSync(candidate)) return candidate;
+  }
+  throw new FlowyCLIError(
+    `Migration directory ${dirname} must contain an index.js (or index.ts) entry point.`,
+    CONFIG_ERROR
+  );
+}
+
+/**
+ * Load, sort, and validate all migration files and directories from migrationsDir.
  * @param {string} migrationsDir
  * @returns {Array<{ version: string, filename: string, filePath: string, module: object }>}
  */
@@ -42,15 +61,28 @@ function loadMigrations(migrationsDir) {
     return [];
   }
 
-  const filenames = readdirSync(migrationsDir).filter((f) => MIGRATION_PATTERN.test(f));
+  // Classify each entry as a file migration, directory migration, or ignored
+  const entries = [];
+  for (const name of readdirSync(migrationsDir)) {
+    const fullPath = join(migrationsDir, name);
+    const isDir = statSync(fullPath).isDirectory();
 
-  maybeRegisterTsx(filenames);
+    if (!isDir && FILE_PATTERN.test(name)) {
+      const [, version] = name.match(FILE_PATTERN);
+      entries.push({ version, filename: name, filePath: fullPath, entryPoint: fullPath, isDir: false });
+    } else if (isDir && DIR_PATTERN.test(name)) {
+      const [, version] = name.match(DIR_PATTERN);
+      const entryPoint = resolveDirectoryEntryPoint(fullPath, name);
+      entries.push({ version, filename: name, filePath: fullPath, entryPoint, isDir: true });
+    }
+  }
+
+  maybeRegisterTsx(entries);
 
   // Check for duplicate versions
   const versionCounts = {};
-  for (const filename of filenames) {
-    const [, version] = filename.match(MIGRATION_PATTERN);
-    versionCounts[version] = (versionCounts[version] || 0) + 1;
+  for (const e of entries) {
+    versionCounts[e.version] = (versionCounts[e.version] || 0) + 1;
   }
   const duplicates = Object.entries(versionCounts)
     .filter(([, count]) => count > 1)
@@ -63,21 +95,13 @@ function loadMigrations(migrationsDir) {
   }
 
   // Sort by version number
-  filenames.sort((a, b) => {
-    const [, vA] = a.match(MIGRATION_PATTERN);
-    const [, vB] = b.match(MIGRATION_PATTERN);
-    return parseInt(vA.slice(1), 10) - parseInt(vB.slice(1), 10);
-  });
+  entries.sort((a, b) => parseInt(a.version.slice(1), 10) - parseInt(b.version.slice(1), 10));
 
-  return filenames.map((filename) => {
-    const [, version] = filename.match(MIGRATION_PATTERN);
-    const filePath = join(migrationsDir, filename);
-
+  return entries.map(({ version, filename, filePath, entryPoint }) => {
     let mod;
     try {
-      // Clear cache so tests can reload modules
-      delete require.cache[require.resolve(filePath)];
-      mod = require(filePath);
+      delete require.cache[require.resolve(entryPoint)];
+      mod = require(entryPoint);
       // Handle ES module default exports (tsx may produce these)
       if (mod && mod.__esModule && mod.default) mod = mod.default;
     } catch (err) {
