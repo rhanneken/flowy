@@ -77,11 +77,19 @@ module.exports = function create(description, options) {
   const version = `V${nextNum}`;
 
   const slug = description.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
-  const ext = options.ts ? 'ts' : 'js';
-  const filename = `${version}__${slug}.${ext}`;
-  const filePath = join(config.migrationsDir, filename);
-
   const template = options.ts ? TS_TEMPLATE(version, description) : JS_TEMPLATE(version, description);
-  writeFileSync(filePath, template, 'utf8');
-  console.log(`Created ${filePath}`);
+
+  if (options.dir) {
+    const dirPath = join(config.migrationsDir, `${version}__${slug}`);
+    const entryFile = options.ts ? 'index.ts' : 'index.js';
+    const filePath = join(dirPath, entryFile);
+    mkdirSync(dirPath, { recursive: true });
+    writeFileSync(filePath, template, 'utf8');
+    console.log(`Created ${filePath}`);
+  } else {
+    const ext = options.ts ? 'ts' : 'js';
+    const filePath = join(config.migrationsDir, `${version}__${slug}.${ext}`);
+    writeFileSync(filePath, template, 'utf8');
+    console.log(`Created ${filePath}`);
+  }
 };

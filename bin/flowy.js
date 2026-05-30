@@ -18,6 +18,7 @@ program
   .command('create <description>')
   .description('Create the next migration file')
   .option('--ts', 'create a TypeScript migration (.ts)')
+  .option('--dir', 'create a migration directory with an index.js entry point')
   .action(require('../src/commands/create'));
 
 program
