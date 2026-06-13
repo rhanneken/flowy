@@ -92,7 +92,7 @@ Each migration (file or `index.js`) exports:
 | `description` | ✓ | Human-readable string stored in migration history |
 | `up(scripting, platformClient)` | ✓ | Applies the migration |
 | `down(scripting, platformClient)` | | Rolls back the migration (required for `flowy rollback`) |
-| `flows` | | Array of flow names to check in before `up()` runs, creating a recoverable snapshot |
+| `flows` | | Array of `{ name, type }` objects identifying flows to verify are unlocked before `up()` runs; halts migration if any listed flow is locked |
 
 You are responsible for calling `checkInAsync()` or `publishAsync()` inside `up()`. Flowy does not call them on your behalf.
 
@@ -115,9 +115,9 @@ Consult the [Architect Scripting SDK documentation](https://mypurecloud.github.i
 module.exports = {
   description: 'Add greeting prompt to main inbound flow',
 
-  // Optional. Flowy checks in these flows before calling up(),
-  // creating a snapshot you can recover from if the migration fails.
-  flows: ['MainInbound'],
+  // Optional. Flowy verifies these flows are unlocked before calling up().
+  // Halts with a clear error if any listed flow is locked.
+  flows: [{ name: 'MainInbound', type: 'inboundcall' }],
 
   async up(scripting, platformClient) {
     const flows = scripting.factories.archFactoryFlows;
@@ -171,7 +171,7 @@ import type { ArchitectScripting } from 'purecloud-flow-scripting-api-sdk-javasc
 
 const migration: FlowMigration = {
   description: 'Add callback menu to support flow',
-  flows: ['SupportInbound'],
+  flows: [{ name: 'SupportInbound', type: 'inboundcall' }],
 
   async up(scripting: ArchitectScripting, platformClient: any): Promise<void> {
     const flows = scripting.factories.archFactoryFlows;
@@ -245,7 +245,7 @@ When you run `flowy migrate`, flowy recomputes checksums for all previously appl
 
 ### Pre-migration snapshots
 
-If a migration exports a `flows` array, flowy checks in each named flow before calling `up()`. This creates a recoverable baseline even if the migration fails partway through and even if `down()` is not implemented. If a flow is locked by another user, flowy halts before running `up()` — fix the lock and re-run.
+If a migration exports a `flows` array, flowy verifies each listed flow is unlocked before calling `up()`. If any flow is locked — by a user or a previous failed migration run — flowy halts with a clear error and instructions to resolve the lock before retrying.
 
 ### Error handling
 
