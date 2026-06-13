@@ -9,10 +9,11 @@ export interface FlowMigration {
   description: string;
 
   /**
-   * Optional. Flow names to check in before up() runs, creating a recoverable snapshot.
-   * If absent, no automatic snapshot is taken.
+   * Optional. Flows to verify are unlocked before up() runs. If any listed flow is locked
+   * (by a user or a previous failed migration), flowy halts with a clear error.
+   * If absent, no lock check is performed.
    */
-  flows?: string[];
+  flows?: { name: string; type: string }[];
 
   /**
    * Apply the migration. Responsible for all flow modifications, check-in, and/or publishing.
