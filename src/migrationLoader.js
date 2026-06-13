@@ -124,6 +124,30 @@ function loadMigrations(migrationsDir) {
       );
     }
 
+    if (mod.flows !== undefined) {
+      if (!Array.isArray(mod.flows)) {
+        throw new FlowyCLIError(
+          `Migration ${filename}: "flows" must be an array.`,
+          CONFIG_ERROR,
+        );
+      }
+      for (let i = 0; i < mod.flows.length; i++) {
+        const entry = mod.flows[i];
+        if (
+          typeof entry !== 'object' ||
+          entry === null ||
+          typeof entry.name !== 'string' ||
+          typeof entry.type !== 'string'
+        ) {
+          throw new FlowyCLIError(
+            `Migration ${filename}: flows[${i}] must be an object with name and type ` +
+            `(e.g. { name: 'MyFlow', type: 'inboundcall' }), not a string.`,
+            CONFIG_ERROR,
+          );
+        }
+      }
+    }
+
     return { version, filename, filePath, module: mod };
   });
 }

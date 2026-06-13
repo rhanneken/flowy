@@ -72,6 +72,34 @@ describe('loadMigrations', () => {
     const { loadMigrations } = await import('../src/migrationLoader.js');
     expect(() => loadMigrations(migrationsDir)).toThrow(/duplicate/i);
   });
+
+  it('throws when a flows entry is a string instead of { name, type }', async () => {
+    writeMigration(
+      migrationsDir,
+      'V001__bad_flows.js',
+      `module.exports = {
+        description: 'test',
+        async up() {},
+        flows: ['MyFlow'],
+      };`,
+    );
+    const { loadMigrations } = await import('../src/migrationLoader.js');
+    expect(() => loadMigrations(migrationsDir)).toThrow(/flows\[0\]/);
+  });
+
+  it('accepts flows entries that are { name, type } objects', async () => {
+    writeMigration(
+      migrationsDir,
+      'V001__good_flows.js',
+      `module.exports = {
+        description: 'test',
+        async up() {},
+        flows: [{ name: 'MyFlow', type: 'inboundcall' }],
+      };`,
+    );
+    const { loadMigrations } = await import('../src/migrationLoader.js');
+    expect(() => loadMigrations(migrationsDir)).not.toThrow();
+  });
 });
 
 describe('loadMigrations (directory migrations)', () => {
