@@ -1,53 +1,67 @@
 'use strict';
 
 /**
- * Check in each flow listed in the flows array before a migration runs,
- * but only if the flow currently has a draft (is locked/checked out).
- * If the flow is already cleanly checked in, its most recent checked-in
- * version already serves as the snapshot — no checkout+checkin needed.
+ * Look up a flow by exact name and type, paging through API results until found.
+ * Returns the flow entity from the Platform API, or null if not found.
  *
- * Uses the Platform Client API to discover each flow's type and lock state
- * (required by the Architect Scripting SDK), then conditionally checks the
- * flow out and back in to create a recoverable version.
- *
- * @param {object} scripting        The purecloud-flow-scripting-api-sdk-javascript module
- * @param {string[]|null|undefined} flows  Flow names to snapshot
- * @param {object} platformClient   Authenticated purecloud-platform-client-v2 module
+ * @param {object} flowsApi  Instantiated ArchitectApi
+ * @param {string} name      Exact flow name
+ * @param {string} type      Flow type in any case (normalised to uppercase internally)
+ * @returns {Promise<object|null>}
  */
-async function snapshotFlows(scripting, flows, platformClient) {
+async function findFlow(flowsApi, name, type) {
+  const apiType = type.toUpperCase();
+  let pageNumber = 1;
+  while (true) {
+    const results = await flowsApi.getFlows({ name, type: apiType, pageSize: 25, pageNumber });
+    const match = (results.entities || []).find(
+      (f) => f.name === name && f.type === apiType,
+    );
+    if (match) return match;
+    if (pageNumber >= (results.pageCount || 1)) break;
+    pageNumber++;
+  }
+  return null;
+}
+
+/**
+ * Verify each listed flow is unlocked before a migration runs.
+ * Throws if any flow is not found, locked by a user, or locked by a client.
+ * An unlocked flow is guaranteed to have a clean draft — no action is needed.
+ *
+ * @param {Array<{name: string, type: string}>|null|undefined} flows
+ * @param {object} platformClient  Authenticated purecloud-platform-client-v2 module
+ */
+async function snapshotFlows(flows, platformClient) {
   if (!flows || flows.length === 0) return;
 
   const flowsApi = new platformClient.ArchitectApi();
-  const archFactoryFlows = scripting.factories.archFactoryFlows;
 
-  for (const flowName of flows) {
-    // Discover the flow's type and current lock state via the Platform API.
-    const results = await flowsApi.getFlows({ name: flowName });
-    const flowInfo = (results.entities || []).find((f) => f.name === flowName);
+  for (const entry of flows) {
+    const flowInfo = await findFlow(flowsApi, entry.name, entry.type);
     if (!flowInfo) {
       throw new Error(
-        `Flow "${flowName}" not found. Cannot create pre-migration snapshot. ` +
-        'Remove it from the flows array or ensure it exists before running this migration.',
+        `Flow "${entry.name}" (${entry.type}) not found. Remove it from the flows array ` +
+        'or ensure it exists before running this migration.',
       );
     }
 
-    // If the flow is not checked out by anyone, the most recent checked-in
-    // version is already a clean recovery point — skip the checkout+checkin.
-    if (!flowInfo.lockedUser && !flowInfo.lockedClient) {
-      continue;
+    if (flowInfo.lockedUser) {
+      throw new Error(
+        `Flow "${entry.name}" (${entry.type}) is locked by user ${flowInfo.lockedUser.name}. ` +
+        'Ask them to check in or unlock the flow, then re-run the migration.',
+      );
     }
 
-    // The flow has a draft (it is locked/checked out). Check it in now so
-    // there is a recoverable snapshot before up() runs.
-    // The Platform API returns flow types in uppercase (e.g. 'INBOUNDCALL'),
-    // but the Architect Scripting SDK requires lowercase ('inboundcall').
-    // checkInAsync() takes an optional boolean (ensureSearchable) — there is
-    // no label/comment parameter.
-    const flow = await archFactoryFlows.checkoutAndLoadFlowByFlowNameAsync(
-      flowName,
-      flowInfo.type.toLowerCase(),
-    );
-    await flow.checkInAsync();
+    if (flowInfo.lockedClient) {
+      throw new Error(
+        `Flow "${entry.name}" (${entry.type}) is locked by a client credentials application. ` +
+        'If this is from a previous failed migration run, use ' +
+        `\`flowy unlock "${entry.name}"\` then \`flowy repair\` and \`flowy migrate\` to retry.`,
+      );
+    }
+
+    // Not locked — Genesys Cloud guarantees the draft is clean. Nothing to do.
   }
 }
 

@@ -132,13 +132,9 @@ async function runMigrations(
 async function runOne(migration, scripting, platformClient, options) {
   console.log(`Applying ${migration.version}: ${migration.module.description}`);
 
-  // Pre-migration snapshot
+  // Pre-migration lock check
   if (migration.module.flows && migration.module.flows.length > 0) {
-    await snapshotFlows(
-      scripting,
-      migration.module.flows,
-      platformClient,
-    );
+    await snapshotFlows(migration.module.flows, platformClient);
   }
 
   const checksum = await computeChecksum(migration.filePath);
