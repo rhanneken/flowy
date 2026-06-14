@@ -41,6 +41,23 @@ function makeArchScripting(sessionObj = {}) {
   };
 }
 
+// Platform client whose record/update spies are stable across ArchitectApi()
+// instantiations, so a test can assert that history was (not) written.
+function makePlatformClientWithSpies() {
+  const postFlowsDatatableRows = vi.fn(async () => {});
+  const putFlowsDatatableRow = vi.fn(async () => {});
+  const pc = {
+    ApiClient: { instance: { setEnvironment: vi.fn(), loginClientCredentialsGrant: vi.fn(async () => {}) } },
+    ArchitectApi: vi.fn(() => ({
+      getFlowsDatatables: vi.fn(async () => ({ entities: [{ id: 't1', name: '_flowy_migrations' }] })),
+      getFlowsDatatableRows: vi.fn(async () => ({ entities: [] })),
+      postFlowsDatatableRows,
+      putFlowsDatatableRow,
+    })),
+  };
+  return { pc, postFlowsDatatableRows, putFlowsDatatableRow };
+}
+
 describe('runMigrations', () => {
   let tempFiles = [];
 
@@ -194,6 +211,35 @@ describe('runMigrations', () => {
     errSpy.mockRestore();
   });
 
+  it('prints a scratch-aware lock hint in scratch mode', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { filePath: fp1 } = createTempMigration(
+      'V001__scratch_lock.js',
+      "module.exports = { description: 'a', up: async () => {} };",
+    );
+
+    const lockErr = new Error("Request Error (409): Flow 'MyFlow' is locked by user 'someone@example.com'.");
+    const migrations = [
+      { version: 'V001', filename: 'V001__a.js', filePath: fp1,
+        module: { description: 'a', up: vi.fn(async () => { throw lockErr; }) } },
+    ];
+
+    const { runMigrations } = await import('../src/runner.js');
+    await expect(
+      runMigrations(
+        { clientId: 'id', clientSecret: 'sec', region: 'mypurecloud.com' },
+        migrations, new Set(), new Map(), { scratch: 'V001' },
+        makePlatformClient(),
+        makeArchScripting(),
+      )
+    ).rejects.toThrow(/locked by/);
+
+    // Retry points back at scratch, and does not mention repair.
+    expect(errSpy).toHaveBeenCalledWith(expect.stringContaining('flowy migrate --scratch V001'));
+    expect(errSpy).not.toHaveBeenCalledWith(expect.stringContaining('flowy repair'));
+    errSpy.mockRestore();
+  });
+
   it('does not print a lock hint for "not locked by" errors', async () => {
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const { filePath: fp1 } = createTempMigration(
@@ -221,6 +267,107 @@ describe('runMigrations', () => {
     errSpy.mockRestore();
   });
 
+  it('scratch mode runs only the named migration and records nothing', async () => {
+    const v1up = vi.fn();
+    const v2up = vi.fn();
+    const { filePath: fp2 } = createTempMigration(
+      'V002__scratch.js', "module.exports = { description: 'b', up: async () => {} };",
+    );
+    const migrations = [
+      { version: 'V001', filename: 'V001__a.js', filePath: '/nonexistent/V001__a.js',
+        module: { description: 'a', up: v1up } },
+      { version: 'V002', filename: 'V002__b.js', filePath: fp2,
+        module: { description: 'b', up: v2up } },
+    ];
+
+    const { pc, postFlowsDatatableRows } = makePlatformClientWithSpies();
+    const { runMigrations } = await import('../src/runner.js');
+    await runMigrations(
+      { clientId: 'id', clientSecret: 'sec', region: 'mypurecloud.com' },
+      migrations,
+      new Set(),
+      new Map(),
+      { scratch: 'V002' },
+      pc,
+      makeArchScripting(),
+    );
+
+    expect(v2up).toHaveBeenCalledTimes(1);   // the named migration ran
+    expect(v1up).not.toHaveBeenCalled();     // other pending migrations did not
+    expect(postFlowsDatatableRows).not.toHaveBeenCalled();  // nothing recorded
+  });
+
+  it('scratch mode refuses a version that is already applied', async () => {
+    const upFn = vi.fn();
+    const migrations = [
+      { version: 'V001', filename: 'V001__a.js', filePath: '/nonexistent/V001__a.js',
+        module: { description: 'a', up: upFn } },
+    ];
+
+    const { pc, postFlowsDatatableRows } = makePlatformClientWithSpies();
+    const { runMigrations } = await import('../src/runner.js');
+    await expect(
+      runMigrations(
+        { clientId: 'id', clientSecret: 'sec', region: 'mypurecloud.com' },
+        migrations,
+        new Set(['V001']),            // V001 already applied
+        new Map(),
+        { scratch: 'V001' },
+        pc,
+        makeArchScripting(),
+      )
+    ).rejects.toThrow(/already applied/i);
+
+    expect(upFn).not.toHaveBeenCalled();
+    expect(postFlowsDatatableRows).not.toHaveBeenCalled();
+  });
+
+  it('scratch mode throws when the version does not exist', async () => {
+    const migrations = [
+      { version: 'V001', filename: 'V001__a.js', filePath: '/nonexistent/V001__a.js',
+        module: { description: 'a', up: vi.fn() } },
+    ];
+
+    const { runMigrations } = await import('../src/runner.js');
+    await expect(
+      runMigrations(
+        { clientId: 'id', clientSecret: 'sec', region: 'mypurecloud.com' },
+        migrations,
+        new Set(),
+        new Map(),
+        { scratch: 'V999' },
+        makePlatformClient(),
+        makeArchScripting(),
+      )
+    ).rejects.toThrow(/not found/i);
+  });
+
+  it('scratch mode does not record a failed migration', async () => {
+    const { filePath: fp1 } = createTempMigration(
+      'V001__scratch_fail.js', "module.exports = { description: 'a', up: async () => {} };",
+    );
+    const migrations = [
+      { version: 'V001', filename: 'V001__a.js', filePath: fp1,
+        module: { description: 'a', up: vi.fn(async () => { throw new Error('boom'); }) } },
+    ];
+
+    const { pc, postFlowsDatatableRows } = makePlatformClientWithSpies();
+    const { runMigrations } = await import('../src/runner.js');
+    await expect(
+      runMigrations(
+        { clientId: 'id', clientSecret: 'sec', region: 'mypurecloud.com' },
+        migrations,
+        new Set(),
+        new Map(),
+        { scratch: 'V001' },
+        pc,
+        makeArchScripting(),
+      )
+    ).rejects.toThrow('boom');
+
+    expect(postFlowsDatatableRows).not.toHaveBeenCalled();  // no 'failed' row written
+  });
+
   it('throws on checksum mismatch with --strict', async () => {
     const content = "module.exports = { description: 'a', up: async () => {} };";
     const { filePath: fp1 } = createTempMigration('V001__a_strict.js', content);
@@ -242,5 +389,104 @@ describe('runMigrations', () => {
         makeArchScripting(),
       )
     ).rejects.toThrow(/checksum/i);
+  });
+});
+
+describe('runRollback', () => {
+  const env = { clientId: 'id', clientSecret: 'sec', region: 'mypurecloud.com' };
+
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
+  function mig(version, down) {
+    return {
+      version,
+      filename: `${version}__m.js`,
+      filePath: `/nonexistent/${version}__m.js`,
+      module: { description: version, down },
+    };
+  }
+
+  it('rolls back the newest applied migration and records it as rolled_back', async () => {
+    const v1down = vi.fn();
+    const v2down = vi.fn();
+    const rows = [
+      { key: 'V001', status: 'applied' },
+      { key: 'V002', status: 'applied' },
+    ];
+    const migrations = [mig('V001', v1down), mig('V002', v2down)];
+
+    const { pc, putFlowsDatatableRow } = makePlatformClientWithSpies();
+    const { runRollback } = await import('../src/runner.js');
+    await runRollback(env, migrations, rows, {}, pc, makeArchScripting());
+
+    expect(v2down).toHaveBeenCalledTimes(1);  // newest applied
+    expect(v1down).not.toHaveBeenCalled();
+    expect(putFlowsDatatableRow).toHaveBeenCalledWith(
+      't1', 'V002', expect.objectContaining({ body: expect.objectContaining({ status: 'rolled_back' }) }),
+    );
+  });
+
+  it('reports nothing to roll back when no migration is applied', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const { pc, putFlowsDatatableRow } = makePlatformClientWithSpies();
+    const { runRollback } = await import('../src/runner.js');
+
+    await runRollback(env, [], [], {}, pc, makeArchScripting());
+
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('No applied migrations'));
+    expect(putFlowsDatatableRow).not.toHaveBeenCalled();
+    logSpy.mockRestore();
+  });
+
+  it('scratch mode runs the named down() and records nothing', async () => {
+    const v6down = vi.fn();
+    const migrations = [mig('V006', v6down)];
+
+    const { pc, putFlowsDatatableRow } = makePlatformClientWithSpies();
+    const { runRollback } = await import('../src/runner.js');
+    await runRollback(env, migrations, [], { scratch: 'V006' }, pc, makeArchScripting());
+
+    expect(v6down).toHaveBeenCalledTimes(1);
+    expect(putFlowsDatatableRow).not.toHaveBeenCalled();  // ledger untouched
+  });
+
+  it('scratch mode refuses a version that is already applied', async () => {
+    const v3down = vi.fn();
+    const rows = [{ key: 'V003', status: 'applied' }];
+    const migrations = [mig('V003', v3down)];
+
+    const { pc, putFlowsDatatableRow } = makePlatformClientWithSpies();
+    const { runRollback } = await import('../src/runner.js');
+    await expect(
+      runRollback(env, migrations, rows, { scratch: 'V003' }, pc, makeArchScripting()),
+    ).rejects.toThrow(/recorded as applied/i);
+
+    expect(v3down).not.toHaveBeenCalled();
+    expect(putFlowsDatatableRow).not.toHaveBeenCalled();
+  });
+
+  it('throws when the scratch version does not exist locally', async () => {
+    const { runRollback } = await import('../src/runner.js');
+    await expect(
+      runRollback(env, [], [], { scratch: 'V999' }, makePlatformClient(), makeArchScripting()),
+    ).rejects.toThrow(/not found/i);
+  });
+
+  it('throws when the migration has no down() function', async () => {
+    const migrations = [mig('V006', undefined)];  // no down
+    const { runRollback } = await import('../src/runner.js');
+    await expect(
+      runRollback(env, migrations, [], { scratch: 'V006' }, makePlatformClient(), makeArchScripting()),
+    ).rejects.toThrow(/down\(\)/i);
+  });
+
+  it('wraps a down() failure with a contextual message', async () => {
+    const migrations = [mig('V006', vi.fn(async () => { throw new Error('boom'); }))];
+    const { runRollback } = await import('../src/runner.js');
+    await expect(
+      runRollback(env, migrations, [], { scratch: 'V006' }, makePlatformClient(), makeArchScripting()),
+    ).rejects.toThrow(/Rollback of V006 failed: boom/);
   });
 });

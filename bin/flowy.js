@@ -27,12 +27,14 @@ program
   .option('--env <name>', 'target environment')
   .option('--target <version>', 'apply migrations up to and including this version')
   .option('--strict', 'fail on checksum mismatches instead of warning')
+  .option('--scratch <version>', 'apply a single migration without recording it (local iteration)')
   .action(require('../src/commands/migrate'));
 
 program
   .command('rollback')
   .description('Undo the last applied migration (requires down())')
   .option('--env <name>', 'target environment')
+  .option('--scratch <version>', "run a single migration's down() without recording it (local iteration)")
   .action(require('../src/commands/rollback'));
 
 program

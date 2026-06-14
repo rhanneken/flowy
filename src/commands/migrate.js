@@ -8,6 +8,10 @@ const { authenticatePlatformClient } = require('../gcAuth');
 const exitCodes = require('../exitCodes');
 
 module.exports = async function migrate(options) {
+  if (options.scratch && options.target) {
+    console.error('--scratch and --target cannot be used together.');
+    process.exit(exitCodes.CONFIG_ERROR);
+  }
   resetCache();
   let config;
   try {
@@ -45,7 +49,7 @@ module.exports = async function migrate(options) {
       migrations,
       appliedVersions,
       storedChecksums,
-      { strict: options.strict, target: options.target },
+      { strict: options.strict, target: options.target, scratch: options.scratch },
       platformClient,
     );
   } catch (err) {

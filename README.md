@@ -215,7 +215,9 @@ Projects using only `.js` migrations have no TypeScript dependency.
 | `flowy migrate` | Apply all pending migrations |
 | `flowy migrate --target V005` | Apply migrations up to and including V005 |
 | `flowy migrate --strict` | Fail (rather than warn) on checksum mismatches |
+| `flowy migrate --scratch V006` | Apply a single migration **without recording it** (local iteration) |
 | `flowy rollback` | Undo the last applied migration |
+| `flowy rollback --scratch V006` | Run a single migration's `down()` **without recording it** (local iteration) |
 | `flowy status` | Show applied, pending, and failed migrations |
 | `flowy validate` | Check for missing version numbers or structural errors (local only) |
 | `flowy repair` | Fix history table problems interactively |
@@ -242,6 +244,24 @@ Each row records the version, description, filename, a SHA-256 checksum of the m
 ### Checksum validation
 
 When you run `flowy migrate`, flowy recomputes checksums for all previously applied migration files and compares them to what was stored at apply time. If a file has changed, flowy warns and asks for confirmation before proceeding. Use `--strict` to fail outright instead.
+
+### Scratch mode (local iteration)
+
+While developing a migration that hasn't been merged yet, you often want to run its `up()` and `down()` repeatedly to get it right. Recording those trial runs in the shared `_flowy_migrations` table would pollute everyone's history with a version that doesn't exist on their branch. Scratch mode lets you iterate without writing any history:
+
+```sh
+flowy migrate  --scratch V006   # run V006's up(),   record nothing
+flowy rollback --scratch V006   # run V006's down(), record nothing
+# tweak the migration and repeat
+```
+
+`--scratch` takes the version to act on as its value (it runs that one migration, not all pending), and:
+
+- **Writes no rows** to the history table — not `applied`, not `failed`, not `rolled_back`. The shared ledger stays an honest record of only applied, merged migrations.
+- **Refuses any version already recorded as `applied`.** A scratch `up()` would re-run merged work against the org unrecorded; a scratch `down()` would revert merged work while history still claimed it was live. Either way the ledger would drift, so flowy stops you. To re-run an applied migration, roll it back normally first, or write a corrective migration.
+- Otherwise behaves exactly like a normal run: the pre-migration lock check, the Architect Scripting session, and your `up()`/`down()` all execute for real.
+
+> **Scratch is not a dry run.** The flow changes it makes are real and permanent against the target org — it simply doesn't write them down. Because nothing is recorded, the next ordinary `flowy migrate` will run that `up()` again, so a working `down()` (or an idempotent `up()`) is what makes the iterate loop repeatable. Point `--scratch` at a development/sandbox org, never production.
 
 ### Pre-migration snapshots
 
