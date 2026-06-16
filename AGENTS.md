@@ -34,7 +34,7 @@ Flowy is a CLI tool that manages Genesys Cloud flow migrations, similar to Flywa
 | `src/config.js` | Loads and validates `flowy.config.js`; exports `FlowyCLIError` (an Error subclass carrying `exitCode`) |
 | `src/gcAuth.js` | Authenticates the platform client singleton |
 | `src/archSession.js` | Reverse-maps a domain-style region (e.g. `usw2.pure.cloud`) to the Architect Scripting SDK's internal location identifier |
-| `src/snapshot.js` | Pre-migration lock check: verifies listed flows are unlocked before `up()` runs |
+| `src/lockCheck.js` | Pre-migration lock check: verifies listed flows are unlocked before `up()` runs |
 | `src/appliedBy.js` | Returns `'CI'` in CI environments, otherwise the OS username |
 | `src/exitCodes.js` | Constants: `SUCCESS=0`, `MIGRATION_FAILED=1`, `CONFIG_ERROR=2`, `HISTORY_STORE_ERROR=3` |
 

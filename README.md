@@ -263,7 +263,7 @@ flowy rollback --scratch V006   # run V006's down(), record nothing
 
 > **Scratch is not a dry run.** The flow changes it makes are real and permanent against the target org — it simply doesn't write them down. Because nothing is recorded, the next ordinary `flowy migrate` will run that `up()` again, so a working `down()` (or an idempotent `up()`) is what makes the iterate loop repeatable. Point `--scratch` at a development/sandbox org, never production.
 
-### Pre-migration snapshots
+### Pre-migration lock check
 
 If a migration exports a `flows` array, flowy verifies each listed flow is unlocked before calling `up()`. If any flow is locked — by a user or a previous failed migration run — flowy halts with a clear error and instructions to resolve the lock before retrying.
 

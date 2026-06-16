@@ -32,7 +32,7 @@ async function findFlow(flowsApi, name, type) {
  * @param {Array<{name: string, type: string}>|null|undefined} flows
  * @param {object} platformClient  Authenticated purecloud-platform-client-v2 module
  */
-async function snapshotFlows(flows, platformClient) {
+async function verifyFlowsUnlocked(flows, platformClient) {
   if (!flows || flows.length === 0) return;
 
   const flowsApi = new platformClient.ArchitectApi();
@@ -65,4 +65,4 @@ async function snapshotFlows(flows, platformClient) {
   }
 }
 
-module.exports = { snapshotFlows };
+module.exports = { verifyFlowsUnlocked };

@@ -1,7 +1,7 @@
 'use strict';
 
 const { computeChecksum } = require('./checksum');
-const { snapshotFlows } = require('./snapshot');
+const { verifyFlowsUnlocked } = require('./lockCheck');
 const { record, updateStatus } = require('./historyStore');
 const { getAppliedBy } = require('./appliedBy');
 const { FlowyCLIError } = require('./config');
@@ -10,7 +10,7 @@ const { resolveOrgLocation } = require('./archSession');
 
 /**
  * Core migration runner. Authenticates the Architect Scripting SDK, iterates
- * pending migrations, runs pre-snapshot, calls up(), and records history.
+ * pending migrations, verifies listed flows are unlocked, calls up(), and records history.
  *
  * @param {object} env              { clientId, clientSecret, region }
  * @param {object[]} allMigrations  Full sorted list from migrationLoader
@@ -163,7 +163,7 @@ async function runOne(migration, scripting, platformClient, options) {
 
   // Pre-migration lock check
   if (migration.module.flows && migration.module.flows.length > 0) {
-    await snapshotFlows(migration.module.flows, platformClient);
+    await verifyFlowsUnlocked(migration.module.flows, platformClient);
   }
 
   const checksum = await computeChecksum(migration.filePath);

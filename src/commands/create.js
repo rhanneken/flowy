@@ -9,8 +9,8 @@ const JS_TEMPLATE = (version, description) => `'use strict';
 module.exports = {
   description: ${JSON.stringify(description)},
 
-  // Optional: list flow names to check in before up() runs (pre-migration snapshot).
-  // flows: ['MyFlow'],
+  // Optional: list flows to verify are unlocked before up() runs.
+  // flows: [{ name: 'MyFlow', type: 'inboundcall' }],
 
   async up(scripting, platformClient) {
     // const flows = scripting.factories.archFactoryFlows;
@@ -33,8 +33,8 @@ import type { ArchitectScripting } from 'purecloud-flow-scripting-api-sdk-javasc
 const migration: FlowMigration = {
   description: ${JSON.stringify(description)},
 
-  // Optional: list flow names to check in before up() runs (pre-migration snapshot).
-  // flows: ['MyFlow'],
+  // Optional: list flows to verify are unlocked before up() runs.
+  // flows: [{ name: 'MyFlow', type: 'inboundcall' }],
 
   async up(scripting: ArchitectScripting, platformClient: any): Promise<void> {
     // const flows = scripting.factories.archFactoryFlows;

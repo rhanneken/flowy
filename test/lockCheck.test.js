@@ -31,56 +31,56 @@ function makePlatformClient(flowsByKey = {}) {
   };
 }
 
-describe('snapshotFlows', () => {
+describe('verifyFlowsUnlocked', () => {
   it('does nothing when flows array is empty or absent', async () => {
-    const { snapshotFlows } = await import('../src/snapshot.js');
+    const { verifyFlowsUnlocked } = await import('../src/lockCheck.js');
     const platformClient = makePlatformClient({});
-    await snapshotFlows([], platformClient);
-    await snapshotFlows(null, platformClient);
-    await snapshotFlows(undefined, platformClient);
+    await verifyFlowsUnlocked([], platformClient);
+    await verifyFlowsUnlocked(null, platformClient);
+    await verifyFlowsUnlocked(undefined, platformClient);
     expect(platformClient.ArchitectApi).not.toHaveBeenCalled();
   });
 
   it('resolves without error when listed flow is not locked', async () => {
-    const { snapshotFlows } = await import('../src/snapshot.js');
+    const { verifyFlowsUnlocked } = await import('../src/lockCheck.js');
     const platformClient = makePlatformClient({
       'MainInbound|INBOUNDCALL': {},
     });
     await expect(
-      snapshotFlows([{ name: 'MainInbound', type: 'inboundcall' }], platformClient),
+      verifyFlowsUnlocked([{ name: 'MainInbound', type: 'inboundcall' }], platformClient),
     ).resolves.toBeUndefined();
   });
 
   it('throws a clear error when the flow does not exist', async () => {
-    const { snapshotFlows } = await import('../src/snapshot.js');
+    const { verifyFlowsUnlocked } = await import('../src/lockCheck.js');
     const platformClient = makePlatformClient({});
     await expect(
-      snapshotFlows([{ name: 'NoSuchFlow', type: 'inboundcall' }], platformClient),
+      verifyFlowsUnlocked([{ name: 'NoSuchFlow', type: 'inboundcall' }], platformClient),
     ).rejects.toThrow('Flow "NoSuchFlow" (inboundcall) not found');
   });
 
   it('throws a user-lock error when lockedUser is set', async () => {
-    const { snapshotFlows } = await import('../src/snapshot.js');
+    const { verifyFlowsUnlocked } = await import('../src/lockCheck.js');
     const platformClient = makePlatformClient({
       'MainInbound|INBOUNDCALL': { lockedUser: { name: 'Jane Doe' } },
     });
     await expect(
-      snapshotFlows([{ name: 'MainInbound', type: 'inboundcall' }], platformClient),
+      verifyFlowsUnlocked([{ name: 'MainInbound', type: 'inboundcall' }], platformClient),
     ).rejects.toThrow('locked by user Jane Doe');
   });
 
   it('throws a client-lock error when lockedClient is set', async () => {
-    const { snapshotFlows } = await import('../src/snapshot.js');
+    const { verifyFlowsUnlocked } = await import('../src/lockCheck.js');
     const platformClient = makePlatformClient({
       'MainInbound|INBOUNDCALL': { lockedClient: { id: 'some-client-id' } },
     });
     await expect(
-      snapshotFlows([{ name: 'MainInbound', type: 'inboundcall' }], platformClient),
+      verifyFlowsUnlocked([{ name: 'MainInbound', type: 'inboundcall' }], platformClient),
     ).rejects.toThrow('flowy unlock');
   });
 
   it('paginates across pages to find the matching flow', async () => {
-    const { snapshotFlows } = await import('../src/snapshot.js');
+    const { verifyFlowsUnlocked } = await import('../src/lockCheck.js');
 
     const getFlows = vi.fn()
       .mockResolvedValueOnce({ entities: [], pageCount: 2 })
@@ -92,7 +92,7 @@ describe('snapshotFlows', () => {
     const platformClient = { ArchitectApi: vi.fn(() => ({ getFlows })) };
 
     await expect(
-      snapshotFlows([{ name: 'MainInbound', type: 'inboundcall' }], platformClient),
+      verifyFlowsUnlocked([{ name: 'MainInbound', type: 'inboundcall' }], platformClient),
     ).resolves.toBeUndefined();
 
     expect(getFlows).toHaveBeenCalledTimes(2);
