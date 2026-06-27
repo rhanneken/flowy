@@ -45,7 +45,7 @@ Migrations can be a single file **or** a directory:
 - **File:** `V<NNN>__<description>.js` (or `.ts`)
 - **Directory:** `V<NNN>__<description>/` with `index.js` (or `index.ts`) as the entry point
 
-Each migration exports `description` (string), `up(scripting, platformClient, params)` (required), `down(scripting, platformClient, params)` (optional), and `flows` (optional array of `{ name, type }` objects for pre-migration lock verification). Directory migrations may also include an optional `params.js` file that exports an environment-keyed object; flowy resolves the active environment's sub-object and passes it as the third argument to `up()` and `down()`.
+Each migration exports `description` (string), `up(scripting, platformClient, params)` (required), `down(scripting, platformClient, params)` (optional), and `flows` (optional array of `{ name, type }` objects for pre-migration lock verification). Directory migrations may also include an optional `params.js` file that exports an environment-keyed object; flowy resolves the active environment's sub-object and passes it as the third argument to `up()` and `down()`. `flowy validate` loads `params.js` for each directory migration (using the active environment), so a broken `params.js` is caught before `flowy migrate` runs.
 
 ### History tracking
 
