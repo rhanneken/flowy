@@ -79,7 +79,8 @@ export default migration;
 const TS_DIR_TEMPLATE = (version, description) => `import type { FlowMigration } from '@rhanneken/flowy/types/FlowMigration';
 import type { ArchitectScripting } from 'purecloud-flow-scripting-api-sdk-javascript';
 
-const migration: FlowMigration = {
+// Replace Record<string, unknown> with your params shape, e.g. { phoneNumber: string }
+const migration: FlowMigration<Record<string, unknown>> = {
   description: ${JSON.stringify(description)},
 
   // Optional: list flows to verify are unlocked before up() runs.
