@@ -54,7 +54,8 @@ function resolveDirectoryEntryPoint(dirPath, dirname) {
 /**
  * Load, sort, and validate all migration files and directories from migrationsDir.
  * @param {string} migrationsDir
- * @returns {Array<{ version: string, filename: string, filePath: string, module: object }>}
+ * @param {string} [envName]  When provided, loads and resolves params.js for directory migrations
+ * @returns {Array<{ version: string, filename: string, filePath: string, module: object, params: object|undefined }>}
  */
 function loadMigrations(migrationsDir, envName) {
   if (!existsSync(migrationsDir)) {
