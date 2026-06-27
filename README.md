@@ -265,8 +265,8 @@ Projects using only `.js` migrations have no TypeScript dependency.
 | `flowy init` | Scaffold `flowy.config.js` in the current directory |
 | `flowy create <description>` | Create the next migration file |
 | `flowy create --ts <description>` | Create a TypeScript migration file |
-| `flowy create --dir <description>` | Create a migration directory with an index.js entry point |
-| `flowy create --dir --ts <description>` | Create a migration directory with an index.ts entry point |
+| `flowy create --dir <description>` | Create a migration directory with an index.js entry point; generated `up()`/`down()` include the `params` argument |
+| `flowy create --dir --ts <description>` | Create a migration directory with an index.ts entry point; generated `up()`/`down()` include the `params` argument |
 | `flowy migrate` | Apply all pending migrations |
 | `flowy migrate --target V005` | Apply migrations up to and including V005 |
 | `flowy migrate --strict` | Fail (rather than warn) on checksum mismatches |
