@@ -15,12 +15,12 @@ function makeTempMigration(name, content) {
 function makePlatformClient() {
   return {
     ApiClient: { instance: { setEnvironment: vi.fn(), loginClientCredentialsGrant: vi.fn(async () => {}) } },
-    ArchitectApi: vi.fn(() => ({
+    ArchitectApi: vi.fn(function() { return {
       getFlowsDatatables: vi.fn(async () => ({ entities: [{ id: 't1', name: '_flowy_migrations' }] })),
       getFlowsDatatableRows: vi.fn(async () => ({ entities: [] })),
       postFlowsDatatableRows: vi.fn(async () => {}),
       putFlowsDatatableRow: vi.fn(async () => {}),
-    })),
+    }; }),
   };
 }
 
@@ -48,12 +48,12 @@ function makePlatformClientWithSpies() {
   const putFlowsDatatableRow = vi.fn(async () => {});
   const pc = {
     ApiClient: { instance: { setEnvironment: vi.fn(), loginClientCredentialsGrant: vi.fn(async () => {}) } },
-    ArchitectApi: vi.fn(() => ({
+    ArchitectApi: vi.fn(function() { return {
       getFlowsDatatables: vi.fn(async () => ({ entities: [{ id: 't1', name: '_flowy_migrations' }] })),
       getFlowsDatatableRows: vi.fn(async () => ({ entities: [] })),
       postFlowsDatatableRows,
       putFlowsDatatableRow,
-    })),
+    }; }),
   };
   return { pc, postFlowsDatatableRows, putFlowsDatatableRow };
 }

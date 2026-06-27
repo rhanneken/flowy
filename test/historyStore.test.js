@@ -29,7 +29,7 @@ function makePlatformClient(overrides = {}) {
   };
 
   const client = {
-    ArchitectApi: vi.fn(() => dataTablesApi),
+    ArchitectApi: vi.fn(function() { return dataTablesApi; }),
     _dataTablesApi: dataTablesApi,
     _rows: rows,
     _getTableId: () => tableId,

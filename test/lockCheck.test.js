@@ -12,7 +12,7 @@ import { describe, it, expect, vi } from 'vitest';
  */
 function makePlatformClient(flowsByKey = {}) {
   return {
-    ArchitectApi: vi.fn(() => ({
+    ArchitectApi: vi.fn(function() { return {
       getFlows: vi.fn(async ({ name, type, pageNumber = 1 }) => {
         const key = `${name}|${type}`;   // type is already UPPERCASE from findFlow
         const config = flowsByKey[key];
@@ -27,7 +27,7 @@ function makePlatformClient(flowsByKey = {}) {
         if (config.lockedClient) entity.lockedClient = config.lockedClient;
         return { entities: [entity], pageCount };
       }),
-    })),
+    }; }),
   };
 }
 
@@ -89,7 +89,7 @@ describe('verifyFlowsUnlocked', () => {
         pageCount: 2,
       });
 
-    const platformClient = { ArchitectApi: vi.fn(() => ({ getFlows })) };
+    const platformClient = { ArchitectApi: vi.fn(function() { return { getFlows }; }) };
 
     await expect(
       verifyFlowsUnlocked([{ name: 'MainInbound', type: 'inboundcall' }], platformClient),
