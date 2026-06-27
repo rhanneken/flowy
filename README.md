@@ -213,6 +213,39 @@ module.exports = {
 
 If `params.js` is absent, or the active environment has no matching key, `params` is `undefined`. Existing migrations that ignore the third argument are unaffected.
 
+In TypeScript, annotate `params` explicitly to get type checking on the values you use:
+
+```ts
+// migrations/V003__configure_routing/index.ts
+import type { FlowMigration } from '@rhanneken/flowy/types/FlowMigration';
+import type { ArchitectScripting } from 'purecloud-flow-scripting-api-sdk-javascript';
+
+interface RoutingParams {
+  inboundPhoneNumber: string;
+  webhookUrl: string | undefined;
+}
+
+const migration: FlowMigration<RoutingParams> = {
+  description: 'Configure inbound call routing',
+  flows: [{ name: 'MainInbound', type: 'inboundcall' }],
+
+  async up(scripting: ArchitectScripting, platformClient: any, params?: RoutingParams): Promise<void> {
+    const flows = scripting.factories.archFactoryFlows;
+    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MainInbound', 'inboundcall');
+    // use params?.inboundPhoneNumber, params?.webhookUrl, etc.
+    await flow.publishAsync();
+  },
+
+  async down(scripting: ArchitectScripting, platformClient: any, params?: RoutingParams): Promise<void> {
+    // params is available here too
+  },
+};
+
+export default migration;
+```
+
+If you don't need strong typing on the params shape, `flowy create --dir --ts` generates the simpler `params?: Record<string, unknown>` annotation, which you can narrow later.
+
 Environment variables referenced in `params.js` should live in the project's top-level `.env` file (already gitignored). Prefixing them with the migration version (e.g. `V003_ROUTING_WEBHOOK_SANDBOX`) makes it easy to find and clean up variables when a migration is retired.
 
 > **Note:** `params.js` is excluded from the migration's checksum. Updating params values after a migration is applied does not trigger a checksum warning.
