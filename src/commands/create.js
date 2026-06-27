@@ -79,14 +79,13 @@ export default migration;
 const TS_DIR_TEMPLATE = (version, description) => `import type { FlowMigration } from '@rhanneken/flowy/types/FlowMigration';
 import type { ArchitectScripting } from 'purecloud-flow-scripting-api-sdk-javascript';
 
-// Replace Record<string, unknown> with your params shape, e.g. { phoneNumber: string }
-const migration: FlowMigration<Record<string, unknown>> = {
+const migration: FlowMigration = {
   description: ${JSON.stringify(description)},
 
   // Optional: list flows to verify are unlocked before up() runs.
   // flows: [{ name: 'MyFlow', type: 'inboundcall' }],
 
-  async up(scripting: ArchitectScripting, platformClient: any, params): Promise<void> {
+  async up(scripting: ArchitectScripting, platformClient: any, params?: Record<string, unknown>): Promise<void> {
     // const flows = scripting.factories.archFactoryFlows;
     // const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MyFlow', 'inboundcall');
     // ... make changes ...
@@ -95,7 +94,7 @@ const migration: FlowMigration<Record<string, unknown>> = {
     // await flow.checkInAsync();  // check in only (releases lock)
   },
 
-  // async down(scripting: ArchitectScripting, platformClient: any, params): Promise<void> {
+  // async down(scripting: ArchitectScripting, platformClient: any, params?: Record<string, unknown>): Promise<void> {
   //   // Optional rollback logic.
   // },
 };
