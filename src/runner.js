@@ -170,7 +170,7 @@ async function runOne(migration, scripting, platformClient, options) {
   const startTime = Date.now();
 
   try {
-    await migration.module.up(scripting, platformClient);
+    await migration.module.up(scripting, platformClient, migration.params);
     const executionTime = Date.now() - startTime;
 
     // Scratch mode mutates the org but intentionally records nothing, so the
@@ -308,7 +308,7 @@ async function runRollback(env, migrations, rows, options, platformClient, _arch
       orgLocation,
       async () => {
         try {
-          await migration.module.down(scripting, platformClient);
+          await migration.module.down(scripting, platformClient, migration.params);
         } catch (err) {
           rollbackError = err;
         }

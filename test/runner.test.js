@@ -368,6 +368,61 @@ describe('runMigrations', () => {
     expect(postFlowsDatatableRows).not.toHaveBeenCalled();  // no 'failed' row written
   });
 
+  it('passes migration.params as the third argument to up()', async () => {
+    const { filePath: fp1 } = createTempMigration(
+      'V001__params_up.js',
+      "module.exports = { description: 'a', up: async () => {} };",
+    );
+    const upFn = vi.fn();
+    const migrations = [
+      {
+        version: 'V001', filename: 'V001__a.js', filePath: fp1,
+        params: { phone: '+15550000001' },
+        module: { description: 'a', up: upFn },
+      },
+    ];
+
+    const { runMigrations } = await import('../src/runner.js');
+    await runMigrations(
+      { clientId: 'id', clientSecret: 'sec', region: 'mypurecloud.com' },
+      migrations, new Set(), new Map(), {},
+      makePlatformClient(), makeArchScripting(),
+    );
+
+    expect(upFn).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      { phone: '+15550000001' },
+    );
+  });
+
+  it('passes undefined as the third argument to up() when migration.params is absent', async () => {
+    const { filePath: fp1 } = createTempMigration(
+      'V001__no_params_up.js',
+      "module.exports = { description: 'a', up: async () => {} };",
+    );
+    const upFn = vi.fn();
+    const migrations = [
+      {
+        version: 'V001', filename: 'V001__a.js', filePath: fp1,
+        module: { description: 'a', up: upFn },
+      },
+    ];
+
+    const { runMigrations } = await import('../src/runner.js');
+    await runMigrations(
+      { clientId: 'id', clientSecret: 'sec', region: 'mypurecloud.com' },
+      migrations, new Set(), new Map(), {},
+      makePlatformClient(), makeArchScripting(),
+    );
+
+    expect(upFn).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      undefined,
+    );
+  });
+
   it('throws on checksum mismatch with --strict', async () => {
     const content = "module.exports = { description: 'a', up: async () => {} };";
     const { filePath: fp1 } = createTempMigration('V001__a_strict.js', content);
@@ -488,5 +543,52 @@ describe('runRollback', () => {
     await expect(
       runRollback(env, migrations, [], { scratch: 'V006' }, makePlatformClient(), makeArchScripting()),
     ).rejects.toThrow(/Rollback of V006 failed: boom/);
+  });
+
+  it('passes migration.params as the third argument to down()', async () => {
+    const v1down = vi.fn();
+    const migrations = [
+      {
+        version: 'V001',
+        filename: 'V001__m.js',
+        filePath: '/nonexistent/V001__m.js',
+        params: { phone: '+15550000002' },
+        module: { description: 'V001', down: v1down },
+      },
+    ];
+    const rows = [{ key: 'V001', status: 'applied' }];
+
+    const { pc } = makePlatformClientWithSpies();
+    const { runRollback } = await import('../src/runner.js');
+    await runRollback(env, migrations, rows, {}, pc, makeArchScripting());
+
+    expect(v1down).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      { phone: '+15550000002' },
+    );
+  });
+
+  it('passes undefined as the third argument to down() when migration.params is absent', async () => {
+    const v1down = vi.fn();
+    const migrations = [
+      {
+        version: 'V001',
+        filename: 'V001__m.js',
+        filePath: '/nonexistent/V001__m.js',
+        module: { description: 'V001', down: v1down },
+      },
+    ];
+    const rows = [{ key: 'V001', status: 'applied' }];
+
+    const { pc } = makePlatformClientWithSpies();
+    const { runRollback } = await import('../src/runner.js');
+    await runRollback(env, migrations, rows, {}, pc, makeArchScripting());
+
+    expect(v1down).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      undefined,
+    );
   });
 });
