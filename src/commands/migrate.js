@@ -32,7 +32,7 @@ module.exports = async function migrate(options) {
 
   let migrations;
   try {
-    migrations = loadMigrations(config.migrationsDir);
+    migrations = loadMigrations(config.migrationsDir, config.selectedEnv);
   } catch (err) {
     console.error(err.message);
     process.exit(err.exitCode ?? exitCodes.CONFIG_ERROR);
