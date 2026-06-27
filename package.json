@@ -35,7 +35,7 @@
     "purecloud-platform-client-v2": "latest"
   },
   "devDependencies": {
-    "vitest": "^2.0.0"
+    "vitest": "^4.1.9"
   },
   "peerDependenciesMeta": {
     "tsx": {
