@@ -17,6 +17,7 @@ async function computeFileChecksum(filePath) {
 function collectFiles(dir) {
   const results = [];
   for (const entry of readdirSync(dir)) {
+    if (entry === 'params.js') continue;
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) {
       results.push(...collectFiles(full));

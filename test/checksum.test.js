@@ -87,6 +87,21 @@ describe('computeChecksum (directory)', () => {
     rmSync(dir, { recursive: true });
   });
 
+  it('produces the same checksum whether params.js is present or absent', async () => {
+    const dir1 = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    const dir2 = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    writeFileSync(join(dir1, 'index.js'), 'module.exports = {};');
+    writeFileSync(join(dir2, 'index.js'), 'module.exports = {};');
+    writeFileSync(join(dir1, 'params.js'), `module.exports = { sandbox: { phone: '+1555' } };`);
+    // dir2 has no params.js
+
+    const [a, b] = await Promise.all([computeChecksum(dir1), computeChecksum(dir2)]);
+    expect(a).toBe(b);
+
+    rmSync(dir1, { recursive: true });
+    rmSync(dir2, { recursive: true });
+  });
+
   it('handles subdirectories recursively', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
     mkdirSync(join(dir, 'helpers'));
