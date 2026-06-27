@@ -4,7 +4,7 @@
 
 import type { ArchitectScripting } from 'purecloud-flow-scripting-api-sdk-javascript';
 
-export interface FlowMigration {
+export interface FlowMigration<P extends object = Record<string, unknown>> {
   /** Human-readable description stored in migration history. */
   description: string;
 
@@ -31,8 +31,11 @@ export interface FlowMigration {
    *                         Typed as `any` because the SDK's TypeScript module declaration
    *                         does not export the API classes (e.g. ArchitectApi); only
    *                         ApiClient and PureCloudRegionHosts are in the module type.
+   * @param params           Environment-specific parameters resolved from the migration's
+   *                         params.js (directory migrations only). Undefined if params.js
+   *                         is absent or does not define the active environment.
    */
-  up(scripting: ArchitectScripting, platformClient: any): Promise<void>;
+  up(scripting: ArchitectScripting, platformClient: any, params?: P): Promise<void>;
 
   /**
    * Optional. Roll back the migration. Required for `flowy rollback` to work.
@@ -40,6 +43,9 @@ export interface FlowMigration {
    * @param scripting        The purecloud-flow-scripting-api-sdk-javascript module,
    *                         authenticated and ready to use.
    * @param platformClient   The authenticated purecloud-platform-client-v2 module.
+   * @param params           Environment-specific parameters resolved from the migration's
+   *                         params.js (directory migrations only). Undefined if params.js
+   *                         is absent or does not define the active environment.
    */
-  down?(scripting: ArchitectScripting, platformClient: any): Promise<void>;
+  down?(scripting: ArchitectScripting, platformClient: any, params?: P): Promise<void>;
 }
