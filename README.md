@@ -90,8 +90,8 @@ Each migration (file or `index.js`) exports:
 | Export | Required | Description |
 |--------|----------|-------------|
 | `description` | ✓ | Human-readable string stored in migration history |
-| `up(scripting, platformClient)` | ✓ | Applies the migration |
-| `down(scripting, platformClient)` | | Rolls back the migration (required for `flowy rollback`) |
+| `up(scripting, platformClient, params)` | ✓ | Applies the migration |
+| `down(scripting, platformClient, params)` | | Rolls back the migration (required for `flowy rollback`) |
 | `flows` | | Array of `{ name, type }` objects identifying flows to verify are unlocked before `up()` runs; halts migration if any listed flow is locked |
 
 You are responsible for calling `checkInAsync()` or `publishAsync()` inside `up()`. Flowy does not call them on your behalf.
@@ -141,6 +141,7 @@ module.exports = {
 migrations/
 └── V002__add_hold_music/
     ├── index.js          ← entry point with up() and down()
+    ├── params.js         ← optional: environment-specific values (see below)
     └── hold-music.wav    ← audio asset uploaded inside up()
 ```
 
@@ -161,6 +162,60 @@ module.exports = {
   },
 };
 ```
+
+### Migration parameters (directory migrations only)
+
+When a migration needs values that differ between environments — phone numbers, queue IDs, webhook URLs — add an optional `params.js` to the migration directory:
+
+```
+migrations/
+└── V003__configure_routing/
+    ├── index.js
+    └── params.js
+```
+
+`params.js` exports a plain object keyed by environment name, matching the names in `flowy.config.js`. Non-sensitive values can be hardcoded; sensitive values should reference `process.env`:
+
+```js
+// migrations/V003__configure_routing/params.js
+module.exports = {
+  sandbox: {
+    inboundPhoneNumber: '+15550000001',
+    webhookUrl: process.env.V003_ROUTING_WEBHOOK_SANDBOX,
+  },
+  prod: {
+    inboundPhoneNumber: '+15550000002',
+    webhookUrl: process.env.V003_ROUTING_WEBHOOK_PROD,
+  },
+};
+```
+
+Flowy resolves the active environment's sub-object and passes it to `up()` and `down()` as a third argument:
+
+```js
+// migrations/V003__configure_routing/index.js
+module.exports = {
+  description: 'Configure inbound call routing',
+  flows: [{ name: 'MainInbound', type: 'inboundcall' }],
+
+  async up(scripting, platformClient, params) {
+    const flows = scripting.factories.archFactoryFlows;
+    const flow = await flows.checkoutAndLoadFlowByFlowNameAsync('MainInbound', 'inboundcall');
+    // use params.inboundPhoneNumber, params.webhookUrl, etc.
+    await flow.publishAsync();
+  },
+
+  async down(scripting, platformClient, params) {
+    // params is available here too
+  },
+};
+```
+
+If `params.js` is absent, or the active environment has no matching key, `params` is `undefined`. Existing migrations that ignore the third argument are unaffected.
+
+Environment variables referenced in `params.js` should live in the project's top-level `.env` file (already gitignored). Prefixing them with the migration version (e.g. `V003_ROUTING_WEBHOOK_SANDBOX`) makes it easy to find and clean up variables when a migration is retired.
+
+> **Note:** `params.js` is excluded from the migration's checksum. Updating params values after a migration is applied does not trigger a checksum warning.
 
 ### TypeScript example
 
