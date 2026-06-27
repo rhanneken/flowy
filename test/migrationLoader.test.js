@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mkdirSync, writeFileSync, rmSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
@@ -171,5 +171,45 @@ describe('loadMigrations (directory migrations)', () => {
     const { loadMigrations } = await import('../src/migrationLoader.js');
     const result = loadMigrations(migrationsDir);
     expect(result).toHaveLength(1);
+  });
+
+  it('attaches the environment-specific params when params.js defines the active environment', async () => {
+    const dirPath = join(migrationsDir, 'V001__configure_routing');
+    mkdirSync(dirPath, { recursive: true });
+    writeFileSync(
+      join(dirPath, 'index.js'),
+      `module.exports = { description: 'configure routing', async up() {} };`,
+    );
+    writeFileSync(
+      join(dirPath, 'params.js'),
+      `module.exports = { sandbox: { phone: '+15550000001' }, prod: { phone: '+15550000002' } };`,
+    );
+
+    const { loadMigrations } = await import('../src/migrationLoader.js');
+    const result = loadMigrations(migrationsDir, 'sandbox');
+
+    expect(result[0].params).toEqual({ phone: '+15550000001' });
+  });
+
+  it('sets params to undefined and warns when params.js does not define the active environment', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const dirPath = join(migrationsDir, 'V001__configure_routing');
+    mkdirSync(dirPath, { recursive: true });
+    writeFileSync(
+      join(dirPath, 'index.js'),
+      `module.exports = { description: 'configure routing', async up() {} };`,
+    );
+    writeFileSync(
+      join(dirPath, 'params.js'),
+      `module.exports = { sandbox: { phone: '+15550000001' } };`,
+    );
+
+    const { loadMigrations } = await import('../src/migrationLoader.js');
+    const result = loadMigrations(migrationsDir, 'prod');
+
+    expect(result[0].params).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('"prod"'));
+    warnSpy.mockRestore();
   });
 });

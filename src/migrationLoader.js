@@ -56,7 +56,7 @@ function resolveDirectoryEntryPoint(dirPath, dirname) {
  * @param {string} migrationsDir
  * @returns {Array<{ version: string, filename: string, filePath: string, module: object }>}
  */
-function loadMigrations(migrationsDir) {
+function loadMigrations(migrationsDir, envName) {
   if (!existsSync(migrationsDir)) {
     return [];
   }
@@ -97,7 +97,7 @@ function loadMigrations(migrationsDir) {
   // Sort by version number
   entries.sort((a, b) => parseInt(a.version.slice(1), 10) - parseInt(b.version.slice(1), 10));
 
-  return entries.map(({ version, filename, filePath, entryPoint }) => {
+  return entries.map(({ version, filename, filePath, entryPoint, isDir }) => {
     let mod;
     try {
       delete require.cache[require.resolve(entryPoint)];
@@ -148,7 +148,35 @@ function loadMigrations(migrationsDir) {
       }
     }
 
-    return { version, filename, filePath, module: mod };
+    let params;
+    if (isDir && envName) {
+      const paramsPath = join(filePath, 'params.js');
+      if (existsSync(paramsPath)) {
+        let paramsModule;
+        try {
+          delete require.cache[require.resolve(paramsPath)];
+          paramsModule = require(paramsPath);
+          if (paramsModule && paramsModule.__esModule && paramsModule.default) {
+            paramsModule = paramsModule.default;
+          }
+        } catch (err) {
+          throw new FlowyCLIError(
+            `Failed to load params.js for migration ${filename}: ${err.message}`,
+            CONFIG_ERROR,
+          );
+        }
+        if (Object.prototype.hasOwnProperty.call(paramsModule, envName)) {
+          params = paramsModule[envName];
+        } else {
+          console.warn(
+            `WARNING: params.js for migration ${filename} does not define environment "${envName}". ` +
+            'The third parameter will be undefined.',
+          );
+        }
+      }
+    }
+
+    return { version, filename, filePath, module: mod, params };
   });
 }
 
