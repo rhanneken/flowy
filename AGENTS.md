@@ -30,7 +30,7 @@ Flowy is a CLI tool that manages Genesys Cloud flow migrations, similar to Flywa
 | `src/runner.js` | Exports `runMigrations` (core migration loop: checksum verification, pending filter, Architect Scripting session, calls `up()` per migration, records history) and `runRollback` (selects the newest applied migration — or a named version in scratch mode — and runs its `down()`). Both accept an injected SDK via `_archScripting` for testing and honor **scratch mode**: running a single named migration's `up()`/`down()` without writing any history |
 | `src/migrationLoader.js` | Discovers, validates, and (when `envName` is provided) loads params for migration files and directories from `migrationsDir`; returns a sorted array of `{ version, filename, filePath, module, params }` |
 | `src/historyStore.js` | CRUD against the `_flowy_migrations` Genesys Cloud Data Table; caches the table ID in a module-level variable (reset with `resetCache()`) |
-| `src/checksum.js` | SHA-256 of a file or directory (directory = all files hashed recursively, sorted, with relative paths included; `params.js` is excluded from directory checksums) |
+| `src/checksum.js` | SHA-256 of a file or directory (directory = all files hashed recursively, sorted, with relative paths included; `params.js` and OS-generated junk files — `.DS_Store`, `._*`, `.Spotlight-V100`, `.Trashes`, `Thumbs.db`, `desktop.ini` — are excluded from directory checksums) |
 | `src/config.js` | Loads and validates `flowy.config.js`; exports `FlowyCLIError` (an Error subclass carrying `exitCode`) |
 | `src/gcAuth.js` | Authenticates the platform client singleton |
 | `src/archSession.js` | Reverse-maps a domain-style region (e.g. `usw2.pure.cloud`) to the Architect Scripting SDK's internal location identifier |
