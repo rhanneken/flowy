@@ -14,10 +14,25 @@ async function computeFileChecksum(filePath) {
   });
 }
 
+// OS-generated bookkeeping files that end up on disk incidentally (e.g. macOS
+// Finder writes .DS_Store into any folder it browses) and would otherwise cause
+// checksum mismatches between machines that never intentionally created them.
+const IGNORED_NAMES = new Set([
+  '.DS_Store',
+  '.Spotlight-V100',
+  '.Trashes',
+  'Thumbs.db',
+  'desktop.ini',
+]);
+
+function isIgnored(entry) {
+  return entry === 'params.js' || IGNORED_NAMES.has(entry) || entry.startsWith('._');
+}
+
 function collectFiles(dir) {
   const results = [];
   for (const entry of readdirSync(dir)) {
-    if (entry === 'params.js') continue;
+    if (isIgnored(entry)) continue;
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) {
       results.push(...collectFiles(full));

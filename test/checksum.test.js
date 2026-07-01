@@ -113,4 +113,66 @@ describe('computeChecksum (directory)', () => {
     expect(before).not.toBe(after);
     rmSync(dir, { recursive: true });
   });
+
+  it('ignores .DS_Store files', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    writeFileSync(join(dir, 'index.js'), 'module.exports = {};');
+    const before = await computeChecksum(dir);
+    writeFileSync(join(dir, '.DS_Store'), 'mac-finder-metadata');
+    const after = await computeChecksum(dir);
+    expect(before).toBe(after);
+    rmSync(dir, { recursive: true });
+  });
+
+  it('ignores AppleDouble ._* files', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    writeFileSync(join(dir, 'index.js'), 'module.exports = {};');
+    const before = await computeChecksum(dir);
+    writeFileSync(join(dir, '._index.js'), 'apple-double-resource-fork');
+    const after = await computeChecksum(dir);
+    expect(before).toBe(after);
+    rmSync(dir, { recursive: true });
+  });
+
+  it('ignores Thumbs.db files', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    writeFileSync(join(dir, 'index.js'), 'module.exports = {};');
+    const before = await computeChecksum(dir);
+    writeFileSync(join(dir, 'Thumbs.db'), 'windows-thumbnail-cache');
+    const after = await computeChecksum(dir);
+    expect(before).toBe(after);
+    rmSync(dir, { recursive: true });
+  });
+
+  it('ignores desktop.ini files', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    writeFileSync(join(dir, 'index.js'), 'module.exports = {};');
+    const before = await computeChecksum(dir);
+    writeFileSync(join(dir, 'desktop.ini'), '[.ShellClassInfo]');
+    const after = await computeChecksum(dir);
+    expect(before).toBe(after);
+    rmSync(dir, { recursive: true });
+  });
+
+  it('ignores .Spotlight-V100 directories', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    writeFileSync(join(dir, 'index.js'), 'module.exports = {};');
+    const before = await computeChecksum(dir);
+    mkdirSync(join(dir, '.Spotlight-V100'));
+    writeFileSync(join(dir, '.Spotlight-V100', 'store.db'), 'spotlight-index-data');
+    const after = await computeChecksum(dir);
+    expect(before).toBe(after);
+    rmSync(dir, { recursive: true });
+  });
+
+  it('ignores .Trashes directories', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'flowy-dir-'));
+    writeFileSync(join(dir, 'index.js'), 'module.exports = {};');
+    const before = await computeChecksum(dir);
+    mkdirSync(join(dir, '.Trashes'));
+    writeFileSync(join(dir, '.Trashes', 'deleted-file.js'), 'trashed-content');
+    const after = await computeChecksum(dir);
+    expect(before).toBe(after);
+    rmSync(dir, { recursive: true });
+  });
 });
