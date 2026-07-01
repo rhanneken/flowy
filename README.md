@@ -85,6 +85,8 @@ A migration can be either a single file or a directory:
 
 Both styles coexist freely in the same `migrations/` folder. Use a directory when a migration involves multiple files — helper modules, audio assets, prompt scripts, etc. Files inside the directory are available via normal relative `require`/`import`. Checksums cover all files in the directory, so modifying any file (including assets) triggers the usual checksum warning.
 
+> **Note:** OS-generated bookkeeping files are always excluded from directory checksums: `.DS_Store`, `._*` (macOS AppleDouble), `.Spotlight-V100`, `.Trashes`, `Thumbs.db`, and `desktop.ini`. You don't need to `.gitignore` them out of the migration folder for flowy's sake, though you likely already do for git's.
+
 Each migration (file or `index.js`) exports:
 
 | Export | Required | Description |
