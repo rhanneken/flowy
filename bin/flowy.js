@@ -1,8 +1,24 @@
 #!/usr/bin/env node
 'use strict';
 
-if (process.env.GLOBAL_AGENT_HTTP_PROXY || process.env.GLOBAL_AGENT_HTTPS_PROXY) {
-  require('global-agent').bootstrap();
+// global-agent doesn't set TLS servername for https.request() calls that omit
+// `secureEndpoint` (e.g. the Architect Scripting SDK's raw requests), so the
+// CONNECT-tunneled TLS handshake gets validated against the proxy's own
+// hostname instead of the real target and fails with a cert altname mismatch.
+// proxy-agent (https-proxy-agent under the hood) sets it correctly.
+if (
+  process.env.HTTP_PROXY || process.env.HTTPS_PROXY
+  || process.env.http_proxy || process.env.https_proxy
+  || process.env.GLOBAL_AGENT_HTTP_PROXY || process.env.GLOBAL_AGENT_HTTPS_PROXY
+) {
+  process.env.HTTP_PROXY = process.env.HTTP_PROXY || process.env.GLOBAL_AGENT_HTTP_PROXY;
+  process.env.HTTPS_PROXY = process.env.HTTPS_PROXY || process.env.GLOBAL_AGENT_HTTPS_PROXY;
+  process.env.NO_PROXY = process.env.NO_PROXY || process.env.GLOBAL_AGENT_NO_PROXY;
+
+  const { ProxyAgent } = require('proxy-agent');
+  const proxyAgent = new ProxyAgent();
+  require('http').globalAgent = proxyAgent;
+  require('https').globalAgent = proxyAgent;
 }
 
 const { Command } = require('commander');
