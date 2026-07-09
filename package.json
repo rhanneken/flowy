@@ -1,6 +1,6 @@
 {
   "name": "@rhanneken/flowy",
-  "version": "0.7.4",
+  "version": "0.8.0",
   "description": "Genesys Cloud flow migration tool",
   "license": "0BSD",
   "repository": {
