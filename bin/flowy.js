@@ -2,7 +2,7 @@
 'use strict';
 
 if (process.env.GLOBAL_AGENT_HTTP_PROXY || process.env.GLOBAL_AGENT_HTTPS_PROXY) {
-  require('global-agent/bootstrap');
+  require('global-agent').bootstrap();
 }
 
 const { Command } = require('commander');
