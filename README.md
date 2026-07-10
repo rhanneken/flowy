@@ -74,6 +74,14 @@ module.exports = {
 
 Flowy loads `.env` automatically via [dotenv](https://github.com/motdotla/dotenv). The `--env` flag on any command overrides `defaultEnvironment`. Credentials always come from environment variables — never hardcode them in the config file.
 
+### Running behind a proxy
+
+If flowy runs on a network that requires an outbound HTTP(S) proxy (common on internal/firewalled CI runners), set `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` in the environment. This is required even if `purecloud-platform-client-v2` (the REST client) already works without it — the Architect Scripting SDK makes its own raw requests and does **not** auto-detect a proxy the way `purecloud-platform-client-v2` (via axios) does, so `flowy migrate`/`flowy rollback` can hang or fail with a certificate error even when other Genesys Cloud API calls succeed.
+
+`GLOBAL_AGENT_HTTP_PROXY` / `GLOBAL_AGENT_HTTPS_PROXY` / `GLOBAL_AGENT_NO_PROXY` are also honored, as a fallback for whichever of the standard names isn't set.
+
+If your proxy blocks by hostname allowlist, the Architect Scripting SDK needs egress to `apps.<region>` (e.g. `apps.usw2.pure.cloud`) for session setup and `streaming.<region>` for its live WebSocket connection, in addition to whatever `api.<region>` / `login.<region>` access the REST client already needs.
+
 ---
 
 ## Migration files

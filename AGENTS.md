@@ -25,7 +25,7 @@ Flowy is a CLI tool that manages Genesys Cloud flow migrations, similar to Flywa
 
 | File | Responsibility |
 |------|---------------|
-| `bin/flowy.js` | CLI entry point (Commander.js); wires commands to handlers |
+| `bin/flowy.js` | CLI entry point (Commander.js); wires commands to handlers. Also bootstraps HTTP(S) proxy support (via `proxy-agent`) before any other module loads, since the Architect Scripting SDK's raw `https.request()` calls don't auto-detect a proxy the way axios (used by `purecloud-platform-client-v2`) does. Use `proxy-agent`, not `global-agent` — global-agent only sets TLS `servername` when the request options carry `secureEndpoint: true`, which Node never sets for this SDK's calling style, causing a cert altname mismatch through a CONNECT-tunneled proxy |
 | `src/commands/*.js` | One file per CLI command; thin: loads config/auth, delegates to core modules, calls `process.exit` |
 | `src/runner.js` | Exports `runMigrations` (core migration loop: checksum verification, pending filter, Architect Scripting session, calls `up()` per migration, records history) and `runRollback` (selects the newest applied migration — or a named version in scratch mode — and runs its `down()`). Both accept an injected SDK via `_archScripting` for testing and honor **scratch mode**: running a single named migration's `up()`/`down()` without writing any history |
 | `src/migrationLoader.js` | Discovers, validates, and (when `envName` is provided) loads params for migration files and directories from `migrationsDir`; returns a sorted array of `{ version, filename, filePath, module, params }` |
