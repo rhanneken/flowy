@@ -11,9 +11,15 @@ if (
   || process.env.http_proxy || process.env.https_proxy
   || process.env.GLOBAL_AGENT_HTTP_PROXY || process.env.GLOBAL_AGENT_HTTPS_PROXY
 ) {
-  process.env.HTTP_PROXY = process.env.HTTP_PROXY || process.env.GLOBAL_AGENT_HTTP_PROXY;
-  process.env.HTTPS_PROXY = process.env.HTTPS_PROXY || process.env.GLOBAL_AGENT_HTTPS_PROXY;
-  process.env.NO_PROXY = process.env.NO_PROXY || process.env.GLOBAL_AGENT_NO_PROXY;
+  if (!process.env.HTTP_PROXY && !process.env.http_proxy && process.env.GLOBAL_AGENT_HTTP_PROXY) {
+    process.env.HTTP_PROXY = process.env.GLOBAL_AGENT_HTTP_PROXY;
+  }
+  if (!process.env.HTTPS_PROXY && !process.env.https_proxy && process.env.GLOBAL_AGENT_HTTPS_PROXY) {
+    process.env.HTTPS_PROXY = process.env.GLOBAL_AGENT_HTTPS_PROXY;
+  }
+  if (!process.env.NO_PROXY && !process.env.no_proxy && process.env.GLOBAL_AGENT_NO_PROXY) {
+    process.env.NO_PROXY = process.env.GLOBAL_AGENT_NO_PROXY;
+  }
 
   const { ProxyAgent } = require('proxy-agent');
   const proxyAgent = new ProxyAgent();
