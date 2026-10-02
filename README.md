@@ -371,6 +371,14 @@ If `up()` throws, flowy records the migration as `failed` in history, logs the e
 
 If `up()` succeeds but writing to the history table fails, flowy logs a prominent warning and tells you to run `flowy repair`.
 
+### SDK log output and credentials
+
+The Architect Scripting SDK writes progress notes to the console. During session start, two of those notes include the OAuth client secret and the access token. Flowy intercepts all SDK log output, replaces those values with `[REDACTED]`, and prints everything else unchanged, so you still see the SDK's notes, warnings, and errors.
+
+Versions before 0.8.4 printed these notes verbatim. If you ran `flowy migrate` or `flowy rollback` with an earlier version, rotate the client secret of every OAuth client you used, and check anywhere the output may have been kept — CI job logs in particular.
+
+The redaction covers what the SDK logs. Anything your own migration code prints is not filtered. Don't call `archLogging.setLoggingCallback` from a migration: it replaces flowy's callback, and with it the redaction, for the rest of that run.
+
 ### Locked flows
 
 The Architect Scripting SDK acquires an exclusive lock on a flow when you check it out. The lock is released when `publishAsync()` or `checkInAsync()` completes. If a migration fails between checkout and the final publish/check-in, the lock is left dangling — no subsequent session can check out that flow until the lock is cleared.
