@@ -24,8 +24,10 @@ function makePlatformClient() {
   };
 }
 
-// leakCredentials: emit the same credential-bearing notes the real SDK logs
-// during session start. sessionError: emit that SDK error and end the session
+// leakCredentials: emit the credential-bearing notes the real SDK logs during
+// session start, plus the client secret in a shape no redaction pattern knows,
+// which is only caught if the runner hands the secret itself to the redactor.
+// sessionError: emit that SDK error and end the session
 // with exit code 99 without ever running the callback.
 function makeArchScripting(sessionObj = {}, { leakCredentials = false, sessionError = null } = {}) {
   // Mirrors the real SDK: the registered callback sees every message, and the
@@ -50,6 +52,7 @@ function makeArchScripting(sessionObj = {}, { leakCredentials = false, sessionEr
           `clientSecret: '${clientSecret}', isClientCredentialsOAuthClient: 'true'.`,
         );
         archLogging.emit('info', "- setting auth token 'fake-access-token'.");
+        archLogging.emit('info', `- request body client_secret=${clientSecret}.`);
       }
       if (sessionError) {
         archLogging.emit('error', sessionError);
@@ -103,6 +106,7 @@ describe('runMigrations', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     for (const f of tempFiles) {
       try { unlinkSync(f); } catch { /* ignore */ }
     }
@@ -504,6 +508,7 @@ describe('runMigrations', () => {
     // The notes are still shown, just redacted — flowy is not silencing the SDK.
     expect(all).toContain("clientSecret: '[REDACTED]'");
     expect(all).toContain("setting auth token '[REDACTED]'");
+    expect(all).toContain('client_secret=[REDACTED]');
   });
 
   it('redacts credentials from the SDK errors it reports when the session fails', async () => {
@@ -523,14 +528,14 @@ describe('runMigrations', () => {
       new Map(),
       {},
       makePlatformClient(),
-      makeArchScripting({}, { sessionError: "- ERROR! login failed for clientSecret: 'super-secret-value'." }),
+      makeArchScripting({}, { sessionError: '- ERROR! login rejected: super-secret-value.' }),
     ).catch((e) => e);
 
     const all = printed(logSpy, errSpy);
     logSpy.mockRestore();
     errSpy.mockRestore();
     expect(err.message).toContain('Architect Scripting session failed:');
-    expect(err.message).toContain("login failed for clientSecret: '[REDACTED]'");
+    expect(err.message).toContain('login rejected: [REDACTED].');
     expect(err.message).not.toContain('super-secret-value');
     expect(all).not.toContain('super-secret-value');
     expect(upFn).not.toHaveBeenCalled();
@@ -542,6 +547,10 @@ describe('runRollback', () => {
 
   beforeEach(() => {
     vi.resetModules();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   function mig(version, down) {
@@ -659,6 +668,7 @@ describe('runRollback', () => {
     expect(all).not.toContain('fake-access-token');
     expect(all).toContain("clientSecret: '[REDACTED]'");
     expect(all).toContain("setting auth token '[REDACTED]'");
+    expect(all).toContain('client_secret=[REDACTED]');
   });
 
   it('passes migration.params as the third argument to down()', async () => {
