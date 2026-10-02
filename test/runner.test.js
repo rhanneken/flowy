@@ -24,21 +24,50 @@ function makePlatformClient() {
   };
 }
 
-function makeArchScripting(sessionObj = {}) {
+// leakCredentials: emit the same credential-bearing notes the real SDK logs
+// during session start. sessionError: emit that SDK error and end the session
+// with exit code 99 without ever running the callback.
+function makeArchScripting(sessionObj = {}, { leakCredentials = false, sessionError = null } = {}) {
+  // Mirrors the real SDK: the registered callback sees every message, and the
+  // SDK prints the message itself unless the callback returns exactly true.
+  const archLogging = {
+    hook: null,
+    setLoggingCallback: vi.fn((cb) => { archLogging.hook = cb; }),
+    emit(logType, messageFull) {
+      const handled = archLogging.hook ? archLogging.hook({ logType, messageFull }) === true : false;
+      if (!handled) console.log(messageFull);
+    },
+  };
   const archSession = {
     endTerminatesProcess: true,
     endExitCode: 0,
     _locations: { prod_us_east_1: { host: 'apps.mypurecloud.com' } },
-    startWithClientIdAndSecret: vi.fn(async (orgLocation, callbackStart) => {
+    startWithClientIdAndSecret: vi.fn(async (orgLocation, callbackStart, clientId, clientSecret) => {
+      if (leakCredentials) {
+        archLogging.emit(
+          'info',
+          `- core environment configuration.  env: 'prod', clientId: '${clientId}', ` +
+          `clientSecret: '${clientSecret}', isClientCredentialsOAuthClient: 'true'.`,
+        );
+        archLogging.emit('info', "- setting auth token 'fake-access-token'.");
+      }
+      if (sessionError) {
+        archLogging.emit('error', sessionError);
+        archSession.endExitCode = 99;
+        return;
+      }
       await callbackStart(sessionObj);
     }),
   };
   return {
     environment: { archSession },
-    services: {
-      archLogging: { setLoggingCallback: vi.fn() },
-    },
+    services: { archLogging },
   };
+}
+
+// Everything written to the console through the given spies, as one string.
+function printed(...spies) {
+  return spies.flatMap((spy) => spy.mock.calls).map((args) => args.join(' ')).join('\n');
 }
 
 // Platform client whose record/update spies are stable across ArchitectApi()
@@ -445,6 +474,67 @@ describe('runMigrations', () => {
       )
     ).rejects.toThrow(/checksum/i);
   });
+
+  it('never prints the client secret or access token the SDK logs during session start', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { filePath } = createTempMigration('V001__a_leak.js', "module.exports = { description: 'a', up: async () => {} };");
+    const migrations = [
+      { version: 'V001', filename: 'V001__a_leak.js', filePath, module: { description: 'a', up: vi.fn() } },
+    ];
+
+    const { runMigrations } = await import('../src/runner.js');
+    await runMigrations(
+      { clientId: 'id', clientSecret: 'super-secret-value', region: 'mypurecloud.com' },
+      migrations,
+      new Set(),
+      new Map(),
+      {},
+      makePlatformClient(),
+      makeArchScripting({}, { leakCredentials: true }),
+    );
+
+    const all = printed(logSpy, warnSpy, errSpy);
+    logSpy.mockRestore();
+    warnSpy.mockRestore();
+    errSpy.mockRestore();
+    expect(all).not.toContain('super-secret-value');
+    expect(all).not.toContain('fake-access-token');
+    // The notes are still shown, just redacted — flowy is not silencing the SDK.
+    expect(all).toContain("clientSecret: '[REDACTED]'");
+    expect(all).toContain("setting auth token '[REDACTED]'");
+  });
+
+  it('redacts credentials from the SDK errors it reports when the session fails', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { filePath } = createTempMigration('V001__a_sessfail.js', "module.exports = { description: 'a', up: async () => {} };");
+    const upFn = vi.fn();
+    const migrations = [
+      { version: 'V001', filename: 'V001__a_sessfail.js', filePath, module: { description: 'a', up: upFn } },
+    ];
+
+    const { runMigrations } = await import('../src/runner.js');
+    const err = await runMigrations(
+      { clientId: 'id', clientSecret: 'super-secret-value', region: 'mypurecloud.com' },
+      migrations,
+      new Set(),
+      new Map(),
+      {},
+      makePlatformClient(),
+      makeArchScripting({}, { sessionError: "- ERROR! login failed for clientSecret: 'super-secret-value'." }),
+    ).catch((e) => e);
+
+    const all = printed(logSpy, errSpy);
+    logSpy.mockRestore();
+    errSpy.mockRestore();
+    expect(err.message).toContain('Architect Scripting session failed:');
+    expect(err.message).toContain("login failed for clientSecret: '[REDACTED]'");
+    expect(err.message).not.toContain('super-secret-value');
+    expect(all).not.toContain('super-secret-value');
+    expect(upFn).not.toHaveBeenCalled();
+  });
 });
 
 describe('runRollback', () => {
@@ -543,6 +633,32 @@ describe('runRollback', () => {
     await expect(
       runRollback(env, migrations, [], { scratch: 'V006' }, makePlatformClient(), makeArchScripting()),
     ).rejects.toThrow(/Rollback of V006 failed: boom/);
+  });
+
+  it('never prints the client secret or access token the SDK logs during session start', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const migrations = [mig('V006', vi.fn())];
+
+    const { runRollback } = await import('../src/runner.js');
+    await runRollback(
+      { clientId: 'id', clientSecret: 'super-secret-value', region: 'mypurecloud.com' },
+      migrations,
+      [],
+      { scratch: 'V006' },
+      makePlatformClient(),
+      makeArchScripting({}, { leakCredentials: true }),
+    );
+
+    const all = printed(logSpy, warnSpy, errSpy);
+    logSpy.mockRestore();
+    warnSpy.mockRestore();
+    errSpy.mockRestore();
+    expect(all).not.toContain('super-secret-value');
+    expect(all).not.toContain('fake-access-token');
+    expect(all).toContain("clientSecret: '[REDACTED]'");
+    expect(all).toContain("setting auth token '[REDACTED]'");
   });
 
   it('passes migration.params as the third argument to down()', async () => {

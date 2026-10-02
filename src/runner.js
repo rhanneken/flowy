@@ -7,6 +7,7 @@ const { getAppliedBy } = require('./appliedBy');
 const { FlowyCLIError } = require('./config');
 const { MIGRATION_FAILED, CONFIG_ERROR } = require('./exitCodes');
 const { resolveOrgLocation } = require('./archSession');
+const { installSdkLogging } = require('./sdkLogging');
 
 /**
  * Core migration runner. Authenticates the Architect Scripting SDK, iterates
@@ -103,14 +104,11 @@ async function runMigrations(
   // we manage our own exit codes in the CLI layer.
   archSession.endTerminatesProcess = false;
 
-  // Capture SDK error messages so we can report the real reason if the
-  // session ends with exit code 99 instead of showing a cryptic message.
-  const sdkErrors = [];
-  scripting.services.archLogging.setLoggingCallback((logItem) => {
-    if (logItem.logType === 'error') {
-      sdkErrors.push(logItem.messageFull);
-    }
-  });
+  // Route SDK console output through flowy so credentials are redacted (the
+  // SDK logs the client secret and access token during session start), and
+  // capture SDK error messages so we can report the real reason if the session
+  // ends with exit code 99 instead of showing a cryptic message.
+  const { errors: sdkErrors } = installSdkLogging(scripting, [env.clientSecret]);
 
   // Capture any error from the callback so we can re-throw it after the
   // session ends cleanly, rather than letting it become an unhandled SDK
@@ -301,6 +299,10 @@ async function runRollback(env, migrations, rows, options, platformClient, _arch
   const orgLocation = resolveOrgLocation(env.region, scripting);
   const archSession = scripting.environment.archSession;
   archSession.endTerminatesProcess = false;
+
+  // Route SDK console output through flowy so credentials are redacted (the
+  // SDK logs the client secret and access token during session start).
+  installSdkLogging(scripting, [env.clientSecret]);
 
   let rollbackError = null;
   try {
