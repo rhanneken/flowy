@@ -18,8 +18,13 @@ function makeScripting({ authToken } = {}) {
   };
 }
 
+// chalk emits no colour codes in the test worker (not a TTY). Tests that
+// assert on colour turn it on; this puts it back.
+const defaultChalkLevel = chalk.level;
+
 afterEach(() => {
   vi.restoreAllMocks();
+  chalk.level = defaultChalkLevel;
 });
 
 describe('createRedactor', () => {
@@ -119,7 +124,13 @@ describe('installSdkLogging', () => {
     expect(logSpy).toHaveBeenCalledWith("- clientId: 'abc', clientSecret: '[REDACTED]'.");
   });
 
+  it('rejects secrets that are not an array', () => {
+    expect(() => installSdkLogging(makeScripting(), 's3cr3t-value')).toThrow(TypeError);
+    expect(() => installSdkLogging(makeScripting(), null)).toThrow(TypeError);
+  });
+
   it('prints warnings in yellow and errors in red through console.log, as the SDK does, redacted', () => {
+    chalk.level = 1;
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const scripting = makeScripting();
     installSdkLogging(scripting, ['s3cr3t-value']);
@@ -127,8 +138,8 @@ describe('installSdkLogging', () => {
     scripting.services.archLogging.hook({ logType: 'warning', messageFull: '- WARNING! s3cr3t-value.' });
     scripting.services.archLogging.hook({ logType: 'error', messageFull: '- ERROR! s3cr3t-value.' });
 
-    expect(logSpy).toHaveBeenNthCalledWith(1, chalk.yellow('- WARNING! [REDACTED].'));
-    expect(logSpy).toHaveBeenNthCalledWith(2, chalk.red('- ERROR! [REDACTED].'));
+    expect(logSpy).toHaveBeenNthCalledWith(1, '\u001b[33m- WARNING! [REDACTED].\u001b[39m');
+    expect(logSpy).toHaveBeenNthCalledWith(2, '\u001b[31m- ERROR! [REDACTED].\u001b[39m');
   });
 
   it('redacts the live session token from a message of any shape', () => {
@@ -154,6 +165,7 @@ describe('installSdkLogging', () => {
   });
 
   it('collects redacted, uncoloured error messages in the returned errors array', () => {
+    chalk.level = 1;
     vi.spyOn(console, 'log').mockImplementation(() => {});
     const scripting = makeScripting();
     const { errors } = installSdkLogging(scripting, ['s3cr3t-value']);

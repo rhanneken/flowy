@@ -71,6 +71,11 @@ function sessionToken(scripting) {
  * @returns {{ errors: string[] }}  errors collects every redacted SDK error message
  */
 function installSdkLogging(scripting, secrets = []) {
+  // Fail loudly here rather than inside the callback, where an error would
+  // silently drop every SDK message.
+  if (!Array.isArray(secrets)) {
+    throw new TypeError('installSdkLogging: secrets must be an array');
+  }
   const errors = [];
 
   scripting.services.archLogging.setLoggingCallback((logItem) => {
