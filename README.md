@@ -373,9 +373,9 @@ If `up()` succeeds but writing to the history table fails, flowy logs a prominen
 
 ### SDK log output and credentials
 
-The Architect Scripting SDK writes progress notes to the console. During session start, two of those notes include the OAuth client secret and the access token. Flowy intercepts all SDK log output, replaces those values with `[REDACTED]`, and prints everything else unchanged, so you still see the SDK's notes, warnings, and errors.
+The Architect Scripting SDK writes progress notes to the console. During session start, two of those notes include the OAuth client secret and the access token. Flowy intercepts everything the SDK logs through its logging service, replaces those values with `[REDACTED]`, and prints everything else unchanged, so you still see the SDK's notes, warnings, and errors.
 
-Versions before 0.8.4 printed these notes verbatim. If you ran `flowy migrate` or `flowy rollback` with an earlier version, rotate the client secret of every OAuth client you used, and check anywhere the output may have been kept — CI job logs in particular.
+Versions before 0.8.4 printed these notes verbatim. If you ran `flowy migrate` or `flowy rollback` with an earlier version, rotate the client secret of every OAuth client you used, and check anywhere the output may have been kept — CI job logs in particular. The access token in that output expires on its own; the client secret does not.
 
 The redaction covers what the SDK logs. Anything your own migration code prints is not filtered. Don't call `archLogging.setLoggingCallback` from a migration: it replaces flowy's callback, and with it the redaction, for the rest of that run.
 

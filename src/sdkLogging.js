@@ -11,8 +11,8 @@ const REDACTED = '[REDACTED]';
 //   core environment configuration. ... authToken: '<token>'
 //   setting auth token '<token>'
 //   response body - {"access_token":"<token>", ...}
-// The last one is the OAuth response, logged only when a migration turns on
-// archLogging.logNetworkActivity.
+// The last one is the OAuth response, logged only when
+// archLogging.logNetworkActivity is on (it is off by default).
 const CREDENTIAL_PATTERNS = [
   /(clientSecret: ')[^']*(')/g,
   /(authToken: ')[^']*(')/g,
