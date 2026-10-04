@@ -21,6 +21,8 @@ Flowy is a CLI tool that manages Genesys Cloud flow migrations, similar to Flywa
 - **`purecloud-platform-client-v2`** — REST API client for Genesys Cloud (used for the history Data Table and flow unlock)
 - **`purecloud-flow-scripting-api-sdk-javascript`** (Architect Scripting) — session-based SDK for checking out, modifying, and publishing flows; uses its own auth/session model on top of the platform client
 
+Architect Scripting is pinned to an exact version because `src/sdkLogging.js` depends on how it logs credentials; upgrade it deliberately (change the version, `npm install`, `npm test` — `sdkLogging.test.js` checks the new bundle). The platform client uses a caret range, which stays within one major version.
+
 ### Source modules
 
 | File | Responsibility |
