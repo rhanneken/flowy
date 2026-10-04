@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { writeFileSync, unlinkSync } from 'fs';
+import { writeFileSync, unlinkSync, readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { fileURLToPath } from 'url';
 import { tmpdir } from 'os';
 import { createHash } from 'crypto';
 
@@ -716,5 +717,31 @@ describe('runRollback', () => {
       expect.anything(),
       undefined,
     );
+  });
+});
+
+// Every session must start through runArchSession(), which installs the
+// redacting SDK logging callback first. A startWith*() call anywhere else in
+// src/ would print the client secret and access token.
+describe('Architect Scripting session start', () => {
+  function sourceFiles(dir) {
+    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) return sourceFiles(path);
+      return entry.name.endsWith('.js') ? [path] : [];
+    });
+  }
+
+  it('happens only inside runArchSession() in src/runner.js', () => {
+    const srcDir = fileURLToPath(new URL('../src', import.meta.url));
+    const callSites = sourceFiles(srcDir).flatMap((file) => {
+      const source = readFileSync(file, 'utf8');
+      return [...source.matchAll(/\.startWith\w*\(/g)].map((m) => ({ file, source, index: m.index }));
+    });
+
+    expect(callSites.map((c) => c.file)).toEqual([join(srcDir, 'runner.js')]);
+    const [{ source, index }] = callSites;
+    const enclosing = source.slice(source.lastIndexOf('function ', index));
+    expect(enclosing.startsWith('function runArchSession(')).toBe(true);
   });
 });

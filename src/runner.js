@@ -96,43 +96,26 @@ async function runMigrations(
 
   // 3. Run all pending migrations inside a single ArchScripting session
   const scripting = _archScripting || require('purecloud-flow-scripting-api-sdk-javascript');
-  const archSession = scripting.environment.archSession;
-
   const orgLocation = resolveOrgLocation(env.region, scripting);
-
-  // Prevent the SDK from calling process.exit() when the session ends —
-  // we manage our own exit codes in the CLI layer.
-  archSession.endTerminatesProcess = false;
-
-  // Route SDK console output through flowy so credentials are redacted (the
-  // SDK logs the client secret and access token during session start), and
-  // capture SDK error messages so we can report the real reason if the session
-  // ends with exit code 99 instead of showing a cryptic message.
-  const { errors: sdkErrors } = installSdkLogging(scripting, [env.clientSecret]);
 
   // Capture any error from the callback so we can re-throw it after the
   // session ends cleanly, rather than letting it become an unhandled SDK
   // exception (which would set exit code 99).
   let callbackError = null;
 
-  await archSession.startWithClientIdAndSecret(
-    orgLocation,
-    async () => {
-      try {
-        for (const migration of pending) {
-          await runOne(migration, scripting, platformClient, options);
-        }
-      } catch (err) {
-        callbackError = err;
+  const { endExitCode, sdkErrors } = await runArchSession(scripting, orgLocation, env, async () => {
+    try {
+      for (const migration of pending) {
+        await runOne(migration, scripting, platformClient, options);
       }
-    },
-    env.clientId,
-    env.clientSecret,
-    () => {},   // callbackFunctionEnd — required for the SDK to call _endSession() after our callback resolves
-    true,       // isClientCredentialsOAuthClient
-  );
+    } catch (err) {
+      callbackError = err;
+    }
+  });
 
-  if (archSession.endExitCode === 99) {
+  // Report the real reason from the SDK's own error messages, instead of a
+  // cryptic exit code.
+  if (endExitCode === 99) {
     const reason = sdkErrors.length > 0 ? sdkErrors.join('\n') : 'Unknown Architect Scripting error.';
     throw new FlowyCLIError(
       `Architect Scripting session failed:\n${reason}`,
@@ -297,29 +280,16 @@ async function runRollback(env, migrations, rows, options, platformClient, _arch
 
   const scripting = _archScripting || require('purecloud-flow-scripting-api-sdk-javascript');
   const orgLocation = resolveOrgLocation(env.region, scripting);
-  const archSession = scripting.environment.archSession;
-  archSession.endTerminatesProcess = false;
-
-  // Route SDK console output through flowy so credentials are redacted (the
-  // SDK logs the client secret and access token during session start).
-  installSdkLogging(scripting, [env.clientSecret]);
 
   let rollbackError = null;
   try {
-    await archSession.startWithClientIdAndSecret(
-      orgLocation,
-      async () => {
-        try {
-          await migration.module.down(scripting, platformClient, migration.params);
-        } catch (err) {
-          rollbackError = err;
-        }
-      },
-      env.clientId,
-      env.clientSecret,
-      () => {},   // callbackFunctionEnd — required for the SDK to call _endSession() after our callback resolves
-      true,       // isClientCredentialsOAuthClient
-    );
+    await runArchSession(scripting, orgLocation, env, async () => {
+      try {
+        await migration.module.down(scripting, platformClient, migration.params);
+      } catch (err) {
+        rollbackError = err;
+      }
+    });
     if (rollbackError) throw rollbackError;
 
     // Scratch mode reverts the org but records nothing, keeping the shared
@@ -333,6 +303,40 @@ async function runRollback(env, migrations, rows, options, platformClient, _arch
   } catch (err) {
     throw new FlowyCLIError(`Rollback of ${version} failed: ${err.message}`, MIGRATION_FAILED);
   }
+}
+
+/**
+ * Start an Architect Scripting session and run callbackStart inside it. Every
+ * session flowy starts must go through here: the SDK logs the client secret and
+ * access token during session start, so the redacting logging callback has to
+ * be installed first.
+ *
+ * @param {object} scripting        The purecloud-flow-scripting-api-sdk-javascript module
+ * @param {string} orgLocation      SDK location identifier from resolveOrgLocation()
+ * @param {object} env              { clientId, clientSecret }
+ * @param {Function} callbackStart  Runs inside the session
+ * @returns {Promise<{ endExitCode: number, sdkErrors: string[] }>}
+ *   sdkErrors holds the SDK's error messages from the session, redacted
+ */
+async function runArchSession(scripting, orgLocation, env, callbackStart) {
+  const archSession = scripting.environment.archSession;
+
+  // Prevent the SDK from calling process.exit() when the session ends —
+  // we manage our own exit codes in the CLI layer.
+  archSession.endTerminatesProcess = false;
+
+  const { errors: sdkErrors } = installSdkLogging(scripting, [env.clientSecret]);
+
+  await archSession.startWithClientIdAndSecret(
+    orgLocation,
+    callbackStart,
+    env.clientId,
+    env.clientSecret,
+    () => {},   // callbackFunctionEnd — required for the SDK to call _endSession() after our callback resolves
+    true,       // isClientCredentialsOAuthClient
+  );
+
+  return { endExitCode: archSession.endExitCode, sdkErrors };
 }
 
 module.exports = { runMigrations, runRollback };
